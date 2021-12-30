@@ -19,13 +19,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'ワードウルフ'),
+      home: const LobbyPage(title: 'ワードウルフ'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({
+class LobbyPage extends StatefulWidget {
+  const LobbyPage({
     Key? key,
     required this.title,
   }) : super(key: key);
@@ -33,10 +33,10 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<LobbyPage> createState() => _LobbyPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _LobbyPageState extends State<LobbyPage> {
 
   @override
   Widget build(BuildContext context) {
