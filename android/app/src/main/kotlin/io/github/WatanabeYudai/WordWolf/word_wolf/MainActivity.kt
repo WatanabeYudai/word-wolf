@@ -1,4 +1,4 @@
-package io.github.WatanabeYudai.WordWolf.word_wolf
+package io.github.WatanabeYudai.wordwolf.word_wolf
 
 import io.flutter.embedding.android.FlutterActivity
 
