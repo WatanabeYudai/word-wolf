@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
-import 'package:word_wolf/name_input_page.dart';
+import 'package:word_wolf/playroom_setting_page.dart';
 
 import 'custom_widget/full_width_button.dart';
 import 'custom_widget/simple_input_field.dart';
@@ -82,7 +82,7 @@ class _LobbyPageState extends State<LobbyPage> {
   void _onTapCreatePlayroom() {
     _clearFocus();
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => const NameInputPage(),
+      builder: (_) => const PlayroomSettingPage(),
     ));
   }
 

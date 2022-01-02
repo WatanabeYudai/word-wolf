@@ -64,7 +64,7 @@ class _SimpleInputFieldState extends State<SimpleInputField> {
       return;
     }
 
-    String name = widget.controller?.text ?? '';
-    widget.onSubmit(name);
+    String text = widget.controller?.text ?? '';
+    widget.onSubmit(text);
   }
 }
