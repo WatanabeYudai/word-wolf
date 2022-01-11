@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="io.github.WatanabeYudai.WordWolf.word_wolf">
+    package="io.github.WatanabeYudai.wordwolf.word_wolf">
    <application
         android:label="word_wolf"
         android:name="${applicationName}"
