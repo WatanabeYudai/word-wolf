@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 
 class SimpleInputField extends StatefulWidget {
-  const SimpleInputField({
+  SimpleInputField({
     Key? key,
     this.margin,
     required this.hintText,
     required this.buttonText,
     required this.onSubmit,
     this.validator,
-    this.controller,
   }) : super(key: key);
 
   final EdgeInsetsGeometry? margin;
@@ -17,7 +16,8 @@ class SimpleInputField extends StatefulWidget {
   final String buttonText;
   final void Function(String) onSubmit;
   final String? Function(String?)? validator;
-  final TextEditingController? controller;
+
+  final TextEditingController controller = TextEditingController();
 
   @override
   State<StatefulWidget> createState() => _SimpleInputFieldState();
@@ -64,7 +64,7 @@ class _SimpleInputFieldState extends State<SimpleInputField> {
       return;
     }
 
-    String text = widget.controller?.text ?? '';
+    String text = widget.controller.text;
     widget.onSubmit(text);
   }
 }
