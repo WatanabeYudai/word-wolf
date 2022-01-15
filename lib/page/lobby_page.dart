@@ -62,7 +62,7 @@ class LobbyPage extends StatelessWidget {
                   buttonText: '部屋に入る',
                   prepareValidation: _prepareValidation,
                   validator: _validate,
-                  onSubmit: (code) => _onTapEnterPlayroom(code),
+                  onSubmit: (code) => _onTapEnterPlayroom(context, code),
                 ),
                 const SizedBox(height: 32),
               ],
@@ -79,7 +79,14 @@ class LobbyPage extends StatelessWidget {
     ));
   }
 
-  void _onTapEnterPlayroom(String code) {}
+  void _onTapEnterPlayroom(BuildContext context, String code) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => NameInputPage(
+        isAdminUser: false,
+        roomId: code,
+      ),
+    ));
+  }
 
   Future<void> _prepareValidation(String? code) async {
     if (code?.isEmpty ?? true) {

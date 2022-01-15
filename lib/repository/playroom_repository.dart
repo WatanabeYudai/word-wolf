@@ -7,7 +7,8 @@ import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/model/user.dart';
 
 class PlayroomRepository {
-  CollectionReference collectionRef =
+
+  final CollectionReference collectionRef =
       FirebaseFirestore.instance.collection('playrooms');
 
   Future<String?> createPlayroom(User adminUser) async {
@@ -33,11 +34,9 @@ class PlayroomRepository {
     });
   }
 
-  Future<void> addUser(String playroomId) async {
-    collectionRef.doc(playroomId).get().then((value) {
-      if (!value.exists) {
-        return;
-      }
+  Future<void> addUser(String playroomId, User user) async {
+    return collectionRef.doc(playroomId).update({
+      'users': FieldValue.arrayUnion([user.toMap()]),
     });
   }
 
@@ -69,8 +68,8 @@ class PlayroomRepository {
   }
 
   Future<bool> exists(String roomId) async {
-    return collectionRef.doc(roomId).get().then((room) {
-      return room.exists;
+    return collectionRef.doc(roomId).get().then((snapshot) {
+      return snapshot.exists;
     });
   }
 

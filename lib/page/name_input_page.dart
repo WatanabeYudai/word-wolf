@@ -17,6 +17,7 @@ class NameInputPage extends StatelessWidget {
 
   final GlobalKey<FormState> _formKey = GlobalKey();
   final PlayroomRepository repository = PlayroomRepository();
+  String? validationMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +42,8 @@ class NameInputPage extends StatelessWidget {
                   SimpleInputField(
                     hintText: 'あなたの名前を入力してください',
                     buttonText: '完了',
-                    validator: (name) {
-                      if (name?.isEmpty ?? true) {
-                        return '名前を入力してください';
-                      }
-                      return null;
-                    },
+                    prepareValidation: _prepareValidation,
+                    validator: _validate,
                     onSubmit: (name) => {_onSubmit(context, name)},
                   ),
                 ],
@@ -58,23 +55,47 @@ class NameInputPage extends StatelessWidget {
     );
   }
 
+  Future<void> _prepareValidation(String? name) async {
+    if (name?.isEmpty ?? true) {
+      validationMessage = '名前を入力してください';
+      return;
+    }
+
+    if (isAdminUser) {
+      validationMessage = null;
+      return;
+    }
+
+    return await repository.exists(roomId!).then((exists) {
+      if (!exists) {
+        validationMessage = "部屋が見つかりませんでした";
+      } else {
+        validationMessage = null;
+      }
+    });
+  }
+
+  String? _validate(String? name) {
+    return validationMessage;
+  }
+
   void _onSubmit(BuildContext context, String name) async {
     if (name.isEmpty) {
       return;
     }
 
     User user = User.create(name: name, isWolf: false);
-    if (isAdminUser) {
+    if (roomId == null) {
       await _createPlayroom(user).then((id) => roomId = id);
     } else {
-      _addUser(user);
+      await repository.addUser(roomId!, user);
     }
 
     if (roomId != null) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => PlayroomPage(
-          roomId: roomId ?? '', // TODO: 空文字が渡る余地を無くしたい
-          isAdmin: true,
+          roomId: roomId!,
+          isAdmin: isAdminUser,
         ),
       ));
     } else {
@@ -93,9 +114,5 @@ class NameInputPage extends StatelessWidget {
         return null;
       }
     });
-  }
-
-  void _addUser(User user) {
-    // TODO: 追加前にルームの存在チェックを行う
   }
 }
