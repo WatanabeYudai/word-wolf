@@ -9,6 +9,7 @@ class SimpleInputField extends StatefulWidget {
     required this.buttonText,
     required this.onSubmit,
     this.validator,
+    this.prepareValidation,
   }) : super(key: key);
 
   final EdgeInsetsGeometry? margin;
@@ -16,6 +17,7 @@ class SimpleInputField extends StatefulWidget {
   final String buttonText;
   final void Function(String) onSubmit;
   final String? Function(String?)? validator;
+  final Future<void> Function(String?)? prepareValidation;
 
   final TextEditingController controller = TextEditingController();
 
@@ -60,11 +62,18 @@ class _SimpleInputFieldState extends State<SimpleInputField> {
   }
 
   void _onTap() {
-    if (_formKey.currentState?.validate() != true) {
-      return;
-    }
-
     String text = widget.controller.text;
-    widget.onSubmit(text);
+
+    if (widget.prepareValidation != null) {
+      widget.prepareValidation!(text).then((_) {
+        if (_formKey.currentState?.validate() == true) {
+          widget.onSubmit(text);
+        }
+      });
+    } else {
+      if (_formKey.currentState?.validate() == true) {
+        widget.onSubmit(text);
+      }
+    }
   }
 }
