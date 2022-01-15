@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/page/name_input_page.dart';
+import 'package:word_wolf/repository/playroom_repository.dart';
 
 import '../custom_widget/full_width_button.dart';
 import '../custom_widget/simple_input_field.dart';
 
 class LobbyPage extends StatelessWidget {
-  const LobbyPage({Key? key}) : super(key: key);
+  LobbyPage({Key? key}) : super(key: key);
+
+  final repository = PlayroomRepository();
+
+  String? validationMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +60,8 @@ class LobbyPage extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 32),
                   hintText: '部屋コード',
                   buttonText: '部屋に入る',
-                  validator: _validatePlayroomCode,
+                  prepareValidation: _prepareValidation,
+                  validator: _validate,
                   onSubmit: (code) => _onTapEnterPlayroom(code),
                 ),
                 const SizedBox(height: 32),
@@ -75,11 +81,22 @@ class LobbyPage extends StatelessWidget {
 
   void _onTapEnterPlayroom(String code) {}
 
-  String? _validatePlayroomCode(String? name) {
-    if (name?.isEmpty ?? true) {
-      return '部屋コードを入力してください';
+  Future<void> _prepareValidation(String? code) async {
+    if (code?.isEmpty ?? true) {
+      validationMessage = '部屋コードを入力してください';
+      return;
     }
-    return null;
+    return await repository.exists(code!).then((exists) {
+      if (exists) {
+        validationMessage = null;
+      } else {
+        validationMessage = '部屋コードが間違ってます';
+      }
+    });
+  }
+
+  String? _validate(String? code) {
+    return validationMessage;
   }
 }
 

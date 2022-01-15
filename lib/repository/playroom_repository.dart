@@ -68,6 +68,12 @@ class PlayroomRepository {
     }));
   }
 
+  Future<bool> exists(String roomId) async {
+    return collectionRef.doc(roomId).get().then((room) {
+      return room.exists;
+    });
+  }
+
   String _generateRandomString(int length) {
     const _randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const _charsLength = _randomChars.length;
