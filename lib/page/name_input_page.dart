@@ -9,14 +9,13 @@ class NameInputPage extends StatelessWidget {
   NameInputPage({
     Key? key,
     required this.isAdminUser,
-    this.roomId,
+    this.playroomId,
   }) : super(key: key);
 
   final bool isAdminUser;
-  String? roomId;
+  String? playroomId;
 
   final GlobalKey<FormState> _formKey = GlobalKey();
-  final PlayroomRepository repository = PlayroomRepository();
   String? validationMessage;
 
   @override
@@ -66,7 +65,8 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    return await repository.exists(roomId!).then((exists) {
+    var repository = PlayroomRepository(playroomId: playroomId!);
+    return await repository.exists(playroomId!).then((exists) {
       if (!exists) {
         validationMessage = "部屋が見つかりませんでした";
       } else {
@@ -85,16 +85,17 @@ class NameInputPage extends StatelessWidget {
     }
 
     User user = User.create(name: name, isWolf: false);
-    if (roomId == null) {
-      await _createPlayroom(user).then((id) => roomId = id);
+    if (playroomId == null) {
+      await _createPlayroom(user).then((id) => playroomId = id);
     } else {
-      await repository.addUser(roomId!, user);
+      var repository = PlayroomRepository(playroomId: playroomId!);
+      await repository.addUser(user);
     }
 
-    if (roomId != null) {
+    if (playroomId != null) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => PlayroomPage(
-          roomId: roomId!,
+          playroomId: playroomId!,
           userId: user.id,
           isAdmin: isAdminUser,
         ),
@@ -107,7 +108,7 @@ class NameInputPage extends StatelessWidget {
   Future<String?> _createPlayroom(User user) async {
     // TODO: 「お待ちください」的な表示
     // TODO: ボタンを複数回クリックできないようにする
-    return repository.createPlayroom(user).then((id) {
+    return PlayroomRepository.createPlayroom(user).then((id) {
       if (id != null) {
         return id;
       } else {

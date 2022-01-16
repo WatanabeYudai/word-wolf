@@ -9,8 +9,6 @@ import '../custom_widget/simple_input_field.dart';
 class LobbyPage extends StatelessWidget {
   LobbyPage({Key? key}) : super(key: key);
 
-  final repository = PlayroomRepository();
-
   String? validationMessage;
 
   @override
@@ -83,7 +81,7 @@ class LobbyPage extends StatelessWidget {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => NameInputPage(
         isAdminUser: false,
-        roomId: code,
+        playroomId: code,
       ),
     ));
   }
@@ -93,7 +91,8 @@ class LobbyPage extends StatelessWidget {
       validationMessage = '部屋コードを入力してください';
       return;
     }
-    return await repository.exists(code!).then((exists) {
+    var repository = PlayroomRepository(playroomId: code!);
+    return await repository.exists(code).then((exists) {
       if (exists) {
         validationMessage = null;
       } else {

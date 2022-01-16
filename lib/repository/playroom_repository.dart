@@ -8,13 +8,18 @@ import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/model/user.dart';
 
 class PlayroomRepository {
-  final CollectionReference collectionRef =
-      FirebaseFirestore.instance.collection('playrooms');
+  PlayroomRepository({
+    required this.playroomId,
+  });
 
-  Future<String?> createPlayroom(User adminUser) {
+  final String playroomId;
+
+  final collectionRef = FirebaseFirestore.instance.collection('playrooms');
+
+  static Future<String?> createPlayroom(User adminUser) {
 
     final String playroomId = _generateRandomString(6);
-    DocumentReference docRef = collectionRef.doc(playroomId);
+    DocumentReference docRef = FirebaseFirestore.instance.collection('playrooms').doc(playroomId);
     return docRef.get().then((value) {
       // 同じ ID の部屋が存在したらエラーを返す。
       if (value.exists) {
@@ -35,14 +40,14 @@ class PlayroomRepository {
     });
   }
 
-  Future<void> addUser(String playroomId, User user) {
+  Future<void> addUser(User user) {
     return collectionRef.doc(playroomId).update({
       'users': FieldValue.arrayUnion([user.toMap()]),
     });
   }
 
-  void removeUser(String playroomId, String userId) async {
-    var target = await findUser(playroomId, userId);
+  void removeUser(String userId) async {
+    var target = await findUser(userId);
     if (target == null) {
       return;
     }
@@ -52,15 +57,15 @@ class PlayroomRepository {
     });
   }
 
-  Future<User?> findUser(String playroomId, String userId) {
+  Future<User?> findUser(String userId) {
     return collectionRef.doc(playroomId).get().then((snapshot) {
       var users = _snapshotToUserList(snapshot);
       return users.firstWhereOrNull((user) => user.id == userId);
     });
   }
 
-  Stream<Playroom> getPlayroom(String id) {
-    return collectionRef.doc(id).snapshots().transform(StreamTransformer<
+  Stream<Playroom> getPlayroom() {
+    return collectionRef.doc(playroomId).snapshots().transform(StreamTransformer<
         DocumentSnapshot<Map<String, dynamic>>,
         Playroom>.fromHandlers(handleData: (snapshot, sink) {
       if (snapshot.exists) {
@@ -98,7 +103,7 @@ class PlayroomRepository {
         .toList();
   }
 
-  String _generateRandomString(int length) {
+   static String _generateRandomString(int length) {
     const _randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const _charsLength = _randomChars.length;
 

@@ -78,8 +78,7 @@ class GameSettingPage extends HookConsumerWidget {
     }
     String name = controller.text;
     User adminUser = User.create(name: name, isWolf: false);
-    PlayroomRepository repository = PlayroomRepository();
-    repository.createPlayroom(adminUser);
+    PlayroomRepository.createPlayroom(adminUser);
   }
 }
 

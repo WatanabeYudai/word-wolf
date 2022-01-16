@@ -8,16 +8,16 @@ import 'package:word_wolf/repository/playroom_repository.dart';
 class PlayroomPage extends StatelessWidget {
   PlayroomPage({
     Key? key,
-    required this.roomId,
+    required this.playroomId,
     required this.userId,
     required this.isAdmin,
   }) : super(key: key);
 
-  final String roomId;
+  final String playroomId;
   final String userId;
   final bool isAdmin;
 
-  final PlayroomRepository repository = PlayroomRepository();
+  late var repository = PlayroomRepository(playroomId: playroomId);
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,8 @@ class PlayroomPage extends StatelessWidget {
             color: Colors.white,
           ),
           onPressed: () => _showLeavingRoomDialog(context, () {
-            repository.removeUser(roomId, userId);
+            var repository = PlayroomRepository(playroomId: playroomId);
+            repository.removeUser(userId);
           }),
         ),
       ),
@@ -38,7 +39,7 @@ class PlayroomPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 32),
         child: NoGlowScrollView(
           child: StreamBuilder<Playroom>(
-            stream: repository.getPlayroom(roomId),
+            stream: repository.getPlayroom(),
             builder: (context, playroom) {
               if (!playroom.hasData) {
                 return const Center(
