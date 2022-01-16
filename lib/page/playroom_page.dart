@@ -9,10 +9,12 @@ class PlayroomPage extends StatelessWidget {
   PlayroomPage({
     Key? key,
     required this.roomId,
+    required this.userId,
     required this.isAdmin,
   }) : super(key: key);
 
   final String roomId;
+  final String userId;
   final bool isAdmin;
 
   final PlayroomRepository repository = PlayroomRepository();
@@ -27,7 +29,9 @@ class PlayroomPage extends StatelessWidget {
             Icons.home,
             color: Colors.white,
           ),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => _showLeavingRoomDialog(context, () {
+            repository.removeUser(roomId, userId);
+          }),
         ),
       ),
       body: Padding(
@@ -102,6 +106,32 @@ class PlayroomPage extends StatelessWidget {
       child: Column(
         children: const [Text('〜メンバー〜')] +
             room.users.map((user) => Text(user.name)).toList(),
+      ),
+    );
+  }
+
+  void _showLeavingRoomDialog(BuildContext context, Function onPressedOk) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('退出'),
+        content: const Text('部屋から退出してもよろしいですか？'),
+        actions: [
+          TextButton(
+            child: const Text('OK'),
+            onPressed: () {
+              onPressedOk();
+              Navigator.of(context).pop();
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
       ),
     );
   }

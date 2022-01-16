@@ -95,6 +95,7 @@ class NameInputPage extends StatelessWidget {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => PlayroomPage(
           roomId: roomId!,
+          userId: user.id,
           isAdmin: isAdminUser,
         ),
       ));

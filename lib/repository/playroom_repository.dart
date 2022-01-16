@@ -2,16 +2,17 @@ import 'dart:async';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection/collection.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/model/user.dart';
 
 class PlayroomRepository {
-
   final CollectionReference collectionRef =
       FirebaseFirestore.instance.collection('playrooms');
 
-  Future<String?> createPlayroom(User adminUser) async {
+  Future<String?> createPlayroom(User adminUser) {
+
     final String playroomId = _generateRandomString(6);
     DocumentReference docRef = collectionRef.doc(playroomId);
     return docRef.get().then((value) {
@@ -34,24 +35,36 @@ class PlayroomRepository {
     });
   }
 
-  Future<void> addUser(String playroomId, User user) async {
+  Future<void> addUser(String playroomId, User user) {
     return collectionRef.doc(playroomId).update({
       'users': FieldValue.arrayUnion([user.toMap()]),
     });
   }
 
+  void removeUser(String playroomId, String userId) async {
+    var target = await findUser(playroomId, userId);
+    if (target == null) {
+      return;
+    }
+
+    collectionRef.doc(playroomId).update({
+      'users': FieldValue.arrayRemove([target.toMap()]),
+    });
+  }
+
+  Future<User?> findUser(String playroomId, String userId) {
+    return collectionRef.doc(playroomId).get().then((snapshot) {
+      var users = _snapshotToUserList(snapshot);
+      return users.firstWhereOrNull((user) => user.id == userId);
+    });
+  }
+
   Stream<Playroom> getPlayroom(String id) {
-    return collectionRef.doc(id).snapshots().transform(
-        StreamTransformer<DocumentSnapshot<Map<String, dynamic>>, Playroom>
-            .fromHandlers(handleData: (snapshot, sink) {
+    return collectionRef.doc(id).snapshots().transform(StreamTransformer<
+        DocumentSnapshot<Map<String, dynamic>>,
+        Playroom>.fromHandlers(handleData: (snapshot, sink) {
       if (snapshot.exists) {
-        var anyList = snapshot.get('users') as List<dynamic>;
-        var mapList = anyList.map((e) => e as Map<String, dynamic>).toList();
-        var users = mapList.map((e) => User(
-          id: e['id'],
-          name: e['name'],
-          isWolf: e['isWolf'],
-        )).toList();
+        var users = _snapshotToUserList(snapshot);
         var topic = TopicHelper.fromName(snapshot.get('topic'));
         var room = Playroom(
           id: snapshot.get('id'),
@@ -71,6 +84,18 @@ class PlayroomRepository {
     return collectionRef.doc(roomId).get().then((snapshot) {
       return snapshot.exists;
     });
+  }
+
+  List<User> _snapshotToUserList(DocumentSnapshot snapshot) {
+    var anyList = snapshot.get('users') as List<dynamic>;
+    var mapList = anyList.map((e) => e as Map<String, dynamic>).toList();
+    return mapList
+        .map((e) => User(
+              id: e['id'],
+              name: e['name'],
+              isWolf: e['isWolf'],
+            ))
+        .toList();
   }
 
   String _generateRandomString(int length) {
