@@ -9,12 +9,12 @@ class PlayroomPage extends StatelessWidget {
   PlayroomPage({
     Key? key,
     required this.playroomId,
-    required this.userId,
+    required this.playerId,
     required this.isAdmin,
   }) : super(key: key);
 
   final String playroomId;
-  final String userId;
+  final String playerId;
   final bool isAdmin;
 
   late var repository = PlayroomRepository(playroomId: playroomId);
@@ -31,7 +31,7 @@ class PlayroomPage extends StatelessWidget {
           ),
           onPressed: () => _showLeavingRoomDialog(context, () {
             var repository = PlayroomRepository(playroomId: playroomId);
-            repository.removeUser(userId);
+            repository.setIsActive(playerId, false);
           }),
         ),
       ),
@@ -106,7 +106,7 @@ class PlayroomPage extends StatelessWidget {
     return Card(
       child: Column(
         children: const [Text('〜メンバー〜')] +
-            room.users.map((user) => Text(user.name)).toList(),
+            room.players.map((user) => Text(user.name)).toList(),
       ),
     );
   }

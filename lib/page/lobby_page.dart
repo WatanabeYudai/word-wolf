@@ -73,14 +73,14 @@ class LobbyPage extends StatelessWidget {
 
   void _onTapCreatePlayroom(BuildContext context) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => NameInputPage(isAdminUser: true),
+      builder: (_) => NameInputPage(isAdmin: true),
     ));
   }
 
   void _onTapEnterPlayroom(BuildContext context, String code) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => NameInputPage(
-        isAdminUser: false,
+        isAdmin: false,
         playroomId: code,
       ),
     ));

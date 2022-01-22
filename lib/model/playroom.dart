@@ -1,12 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:word_wolf/model/topic.dart';
-import 'package:word_wolf/model/user.dart';
+import 'package:word_wolf/model/player.dart';
 
 class Playroom {
   Playroom({
     required this.id,
-    required this.adminUserId,
-    required this.users,
+    required this.adminPlayerId,
+    required this.players,
     required this.wolfCount,
     required this.timeLimitMinutes,
     required this.topic,
@@ -14,8 +14,8 @@ class Playroom {
   });
 
   String id;
-  String adminUserId;
-  List<User> users;
+  String adminPlayerId;
+  List<Player> players;
   int wolfCount;
   int timeLimitMinutes;
   Topic topic;
@@ -24,8 +24,8 @@ class Playroom {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'adminUserId': adminUserId,
-      'users': users.map((user) => user.toMap()).toList(),
+      'adminUserId': adminPlayerId,
+      'players': Player.toMap(players),
       'wolfCount': wolfCount,
       'timeLimitMinutes': timeLimitMinutes,
       'topic': topic.name(),

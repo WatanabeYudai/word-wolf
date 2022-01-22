@@ -1,18 +1,19 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/custom_widget/simple_input_field.dart';
-import 'package:word_wolf/model/user.dart';
+import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/page/playroom_page.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
 
 class NameInputPage extends StatelessWidget {
   NameInputPage({
     Key? key,
-    required this.isAdminUser,
+    required this.isAdmin,
     this.playroomId,
   }) : super(key: key);
 
-  final bool isAdminUser;
+  final bool isAdmin;
   String? playroomId;
 
   final GlobalKey<FormState> _formKey = GlobalKey();
@@ -60,7 +61,7 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    if (isAdminUser) {
+    if (isAdmin) {
       validationMessage = null;
       return;
     }
@@ -84,20 +85,32 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    User user = User.create(name: name, isWolf: false);
+    var currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      // TODO: エラー表示
+      return;
+    }
+
+    var player = Player(
+      id: currentUser.uid,
+      name: name,
+      isWolf: false,
+      isActive: true,
+    );
+
     if (playroomId == null) {
-      await _createPlayroom(user).then((id) => playroomId = id);
+      await _createPlayroom(player).then((id) => playroomId = id);
     } else {
       var repository = PlayroomRepository(playroomId: playroomId!);
-      await repository.addUser(user);
+      await repository.addPlayer(player);
     }
 
     if (playroomId != null) {
       Navigator.of(context).pushReplacement(MaterialPageRoute(
         builder: (_) => PlayroomPage(
           playroomId: playroomId!,
-          userId: user.id,
-          isAdmin: isAdminUser,
+          playerId: player.id,
+          isAdmin: isAdmin,
         ),
       ));
     } else {
@@ -105,10 +118,10 @@ class NameInputPage extends StatelessWidget {
     }
   }
 
-  Future<String?> _createPlayroom(User user) async {
+  Future<String?> _createPlayroom(Player player) async {
     // TODO: 「お待ちください」的な表示
     // TODO: ボタンを複数回クリックできないようにする
-    return PlayroomRepository.createPlayroom(user).then((id) {
+    return PlayroomRepository.createPlayroom(player).then((id) {
       if (id != null) {
         return id;
       } else {
