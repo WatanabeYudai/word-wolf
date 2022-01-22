@@ -67,7 +67,7 @@ class NameInputPage extends StatelessWidget {
     }
 
     var repository = PlayroomRepository(playroomId: playroomId!);
-    return await repository.exists(playroomId!).then((exists) {
+    return await repository.exists().then((exists) {
       if (!exists) {
         validationMessage = "部屋が見つかりませんでした";
       } else {

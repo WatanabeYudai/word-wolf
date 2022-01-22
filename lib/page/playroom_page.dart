@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
@@ -18,6 +19,7 @@ class PlayroomPage extends StatelessWidget {
   final bool isAdmin;
 
   late var repository = PlayroomRepository(playroomId: playroomId);
+  var currentUser = FirebaseAuth.instance.currentUser;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +33,7 @@ class PlayroomPage extends StatelessWidget {
           ),
           onPressed: () => _showLeavingRoomDialog(context, () {
             var repository = PlayroomRepository(playroomId: playroomId);
-            repository.setIsActive(playerId, false);
+            repository.removePlayer(currentUser?.uid ?? '');
           }),
         ),
       ),

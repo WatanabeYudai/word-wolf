@@ -13,7 +13,16 @@ class Player {
   final bool isWolf;
   final bool isActive;
 
-  static Map<String, dynamic> toMap(List<Player> players) {
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'isWolf': isWolf,
+      'isActive': isActive,
+    };
+  }
+
+  static Map<String, dynamic> transform(List<Player> players) {
     Map<String, dynamic> playersMap = {};
     for (var player in players) {
       playersMap[player.id] = {

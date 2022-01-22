@@ -25,7 +25,7 @@ class Playroom {
     return {
       'id': id,
       'adminUserId': adminPlayerId,
-      'players': Player.toMap(players),
+      'players': Player.transform(players),
       'wolfCount': wolfCount,
       'timeLimitMinutes': timeLimitMinutes,
       'topic': topic.name(),

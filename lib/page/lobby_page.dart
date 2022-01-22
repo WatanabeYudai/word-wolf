@@ -92,7 +92,7 @@ class LobbyPage extends StatelessWidget {
       return;
     }
     var repository = PlayroomRepository(playroomId: code!);
-    return await repository.exists(code).then((exists) {
+    return await repository.exists().then((exists) {
       if (exists) {
         validationMessage = null;
       } else {
