@@ -14,7 +14,7 @@ class PlayroomRepository {
 
   final String playroomId;
 
-  final collectionRef = FirebaseFirestore.instance.collection('playrooms');
+  late var documentRef = FirebaseFirestore.instance.collection('playrooms').doc(playroomId);
 
   static Future<String?> createPlayroom(Player admin) {
     final String playroomId = _generateRandomString(6);
@@ -40,9 +40,17 @@ class PlayroomRepository {
     });
   }
 
-  Future<void> addUser(User user) {
-    return collectionRef.doc(playroomId).update({
-      'users': FieldValue.arrayUnion([user.toMap()]),
+  Future<void> addPlayer(Player player) {
+    return documentRef.set({
+      'players': {
+        player.id: player.toMap()
+      },
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> removePlayer(String playerId) {
+    return documentRef.update({
+      'players.$playerId': FieldValue.delete(),
     });
   }
 
@@ -52,21 +60,20 @@ class PlayroomRepository {
       return;
     }
 
-    collectionRef.doc(playroomId).update({
+    documentRef.update({
       'players.${target.id}.isActive': isActive,
     });
   }
 
   Future<Player?> findPlayer(String playerId) {
-    return collectionRef.doc(playroomId).get().then((snapshot) {
+    return documentRef.get().then((snapshot) {
       var players = _snapshotToPlayerList(snapshot);
       return players.firstWhereOrNull((player) => player.id == playerId);
     });
   }
 
   Stream<Playroom> getPlayroom() {
-    return collectionRef
-        .doc(playroomId)
+    return documentRef
         .snapshots()
         .transform(StreamTransformer<DocumentSnapshot<Map<String, dynamic>>, Playroom>
             .fromHandlers(handleData: (snapshot, sink) {
@@ -87,8 +94,8 @@ class PlayroomRepository {
     }));
   }
 
-  Future<bool> exists(String roomId) async {
-    return collectionRef.doc(roomId).get().then((snapshot) {
+  Future<bool> exists() async {
+    return documentRef.get().then((snapshot) {
       return snapshot.exists;
     });
   }
