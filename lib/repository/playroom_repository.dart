@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:collection/collection.dart';
 import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
+import 'package:word_wolf/model/playroom_status.dart';
 import 'package:word_wolf/model/topic.dart';
 
 class PlayroomRepository {
@@ -32,6 +33,7 @@ class PlayroomRepository {
         wolfCount: 1,
         timeLimitMinutes: 5,
         topic: Topic.sports,
+        status: PlayroomStatus.standby,
         createdAt: Timestamp.now(),
       );
       // TODO: 保存できなかったときの処理を検討
@@ -87,6 +89,7 @@ class PlayroomRepository {
           wolfCount: snapshot.get('wolfCount'),
           timeLimitMinutes: snapshot.get('timeLimitMinutes'),
           topic: topic,
+          status: PlayroomStatusHelper.fromName(snapshot.get('status')),
           createdAt: snapshot.get('createdAt'),
         );
         sink.add(room);

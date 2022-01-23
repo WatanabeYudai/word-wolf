@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:word_wolf/model/playroom_status.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/model/player.dart';
 
@@ -10,6 +11,7 @@ class Playroom {
     required this.wolfCount,
     required this.timeLimitMinutes,
     required this.topic,
+    required this.status,
     required this.createdAt,
   });
 
@@ -19,6 +21,7 @@ class Playroom {
   int wolfCount;
   int timeLimitMinutes;
   Topic topic;
+  PlayroomStatus status;
   final Timestamp createdAt;
 
   Map<String, dynamic> toMap() {
@@ -29,6 +32,7 @@ class Playroom {
       'wolfCount': wolfCount,
       'timeLimitMinutes': timeLimitMinutes,
       'topic': topic.name(),
+      'status': status.name,
       'createdAt': createdAt,
     };
   }
