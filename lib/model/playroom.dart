@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:word_wolf/model/playroom_status.dart';
+import 'package:word_wolf/common/c.dart';
+import 'package:word_wolf/model/game_status.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/model/player.dart';
 
@@ -11,7 +12,7 @@ class Playroom {
     required this.wolfCount,
     required this.timeLimitMinutes,
     required this.topic,
-    required this.status,
+    required this.gameStatus,
     required this.createdAt,
   });
 
@@ -21,19 +22,19 @@ class Playroom {
   int wolfCount;
   int timeLimitMinutes;
   Topic topic;
-  PlayroomStatus status;
+  GameStatus gameStatus;
   final Timestamp createdAt;
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'adminUserId': adminPlayerId,
-      'players': Player.transform(players),
-      'wolfCount': wolfCount,
-      'timeLimitMinutes': timeLimitMinutes,
-      'topic': topic.name(),
-      'status': status.name,
-      'createdAt': createdAt,
+      C.playroom.id: id,
+      C.playroom.adminPlayerId: adminPlayerId,
+      C.playroom.players: Player.transform(players),
+      C.playroom.wolfCount: wolfCount,
+      C.playroom.timeLimitMinutes: timeLimitMinutes,
+      C.playroom.topic: topic.name(),
+      C.playroom.gameStatus: gameStatus.name,
+      C.playroom.createdAt: createdAt,
     };
   }
 }

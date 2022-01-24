@@ -1,4 +1,4 @@
-
+import 'package:word_wolf/common/c.dart';
 
 class Player {
   Player({
@@ -15,10 +15,10 @@ class Player {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'name': name,
-      'isWolf': isWolf,
-      'isActive': isActive,
+      C.player.id: id,
+      C.player.name: name,
+      C.player.isWolf: isWolf,
+      C.player.isActive: isActive,
     };
   }
 
@@ -26,10 +26,10 @@ class Player {
     Map<String, dynamic> playersMap = {};
     for (var player in players) {
       playersMap[player.id] = {
-        'id': player.id,
-        'name': player.name,
-        'isWolf': player.isWolf,
-        'isActive':player.isActive,
+        C.player.id: player.id,
+        C.player.name: player.name,
+        C.player.isWolf: player.isWolf,
+        C.player.isActive:player.isActive,
       };
     }
     return playersMap;

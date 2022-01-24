@@ -9,22 +9,25 @@ class PresenceManager {
       databaseURL: Constants.databaseUrl,
   );
 
-  Future<void> updateUserPresence(String uid) async {
+  Future<void> setUserPresenceListener(String uid) async {
     var myConnectionRef = db.ref('users/$uid');
     var connectedRef = db.ref('.info/connected');
+    var offlineStatus = {
+      'isConnected': false,
+      'lastChanged': ServerValue.timestamp,
+    };
+    var onlineStatus = {
+      'isConnected': true,
+      'lastChanged': ServerValue.timestamp,
+    };
     connectedRef.onValue.listen((event) {
       var connected = event.snapshot.value;
       if (connected == false) {
+        myConnectionRef.set(offlineStatus);
         return;
       }
-      myConnectionRef.onDisconnect().set({
-        'isConnected': false,
-        'lastChanged': ServerValue.timestamp,
-      }).then((value) {
-        myConnectionRef.set({
-          'isConnected': true,
-          'lastChanged': ServerValue.timestamp,
-        });
+      myConnectionRef.onDisconnect().set(offlineStatus).then((value) {
+        myConnectionRef.set(onlineStatus);
       });
     });
   }

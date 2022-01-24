@@ -106,13 +106,15 @@ class NameInputPage extends StatelessWidget {
     }
 
     if (playroomId != null) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (_) => PlayroomPage(
-          playroomId: playroomId!,
-          playerId: player.id,
-          isAdmin: isAdmin,
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PlayroomPage(
+            playroomId: playroomId!,
+            playerId: player.id,
+            isAdmin: isAdmin,
+          ),
         ),
-      ));
+      );
     } else {
       // TODO: エラー処理
     }

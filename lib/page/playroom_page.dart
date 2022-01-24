@@ -112,10 +112,26 @@ class PlayroomPage extends StatelessWidget {
   }
 
   Widget _createMemberListView(Playroom room) {
+    var rows = room.players.map((player) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.circle,
+            color: player.isActive ? Colors.greenAccent : Colors.grey,
+          ),
+          Text(player.name),
+        ],
+      );
+    }).toList();
     return Card(
       child: Column(
-        children: const [Text('〜メンバー〜')] +
-            room.players.map((user) => Text(user.name)).toList(),
+        children: [
+          const Text('〜メンバー〜'),
+          Column(
+            children: rows,
+          ),
+        ],
       ),
     );
   }

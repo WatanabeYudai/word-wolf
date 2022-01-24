@@ -20,7 +20,7 @@ void main() async {
 
   if (currentUser != null) {
     var manager = PresenceManager();
-    await manager.updateUserPresence(auth.currentUser!.uid);
+    await manager.setUserPresenceListener(currentUser.uid);
     runApp(
       const ProviderScope(
         child: MyApp(),
