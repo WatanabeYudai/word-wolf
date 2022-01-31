@@ -1,4 +1,4 @@
-enum GameStatus {
+enum GameState {
   standby,
   playing,
   voting,
@@ -6,19 +6,19 @@ enum GameStatus {
 }
 
 class GameStatusHelper {
-  static GameStatus fromName(String name) {
+  static GameState fromName(String name) {
     if (name == 'standby') {
-      return GameStatus.standby;
+      return GameState.standby;
     }
     if (name == 'playing') {
-      return GameStatus.playing;
+      return GameState.playing;
     }
     if (name == 'voting') {
-      return GameStatus.voting;
+      return GameState.voting;
     }
     if (name == 'ended') {
-      return GameStatus.ended;
+      return GameState.ended;
     }
-    return GameStatus.standby;
+    throw ArgumentError();
   }
 }
