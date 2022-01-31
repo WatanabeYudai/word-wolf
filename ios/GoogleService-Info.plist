@@ -3,21 +3,21 @@
 <plist version="1.0">
 <dict>
 	<key>CLIENT_ID</key>
-	<string>352402366210-d18sfs2vlltc1chj9fhhb191s2h9cg9s.apps.googleusercontent.com</string>
+	<string>1035463912363-0i6qbdt9gcmd8s3ss6v1oufl6flaruq0.apps.googleusercontent.com</string>
 	<key>REVERSED_CLIENT_ID</key>
-	<string>com.googleusercontent.apps.352402366210-d18sfs2vlltc1chj9fhhb191s2h9cg9s</string>
+	<string>com.googleusercontent.apps.1035463912363-0i6qbdt9gcmd8s3ss6v1oufl6flaruq0</string>
 	<key>API_KEY</key>
-	<string>AIzaSyBJ9L5XllR7mg6MVnRcsHurKopqeJbYCbw</string>
+	<string>AIzaSyAu9Xrj0EKgT31NmRjD0sZQxM6Hxa1q2To</string>
 	<key>GCM_SENDER_ID</key>
-	<string>352402366210</string>
+	<string>1035463912363</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>io.github.WatanabeYudai.wordwolf.wordWolf</string>
 	<key>PROJECT_ID</key>
-	<string>word-wolf-14ead</string>
+	<string>word-wolf-785a7</string>
 	<key>STORAGE_BUCKET</key>
-	<string>word-wolf-14ead.appspot.com</string>
+	<string>word-wolf-785a7.appspot.com</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -29,6 +29,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:352402366210:ios:938bec53e9a679b1eaac1b</string>
+	<string>1:1035463912363:ios:e44b3e380f9d7d94b640ee</string>
 </dict>
 </plist>
