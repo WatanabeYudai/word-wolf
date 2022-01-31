@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/custom_widget/simple_input_field.dart';
 import 'package:word_wolf/model/player.dart';
+import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/page/playroom_page.dart';
-import 'package:word_wolf/repository/playroom_repository.dart';
 
 class NameInputPage extends StatelessWidget {
   NameInputPage({
@@ -66,8 +66,7 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    var repository = PlayroomRepository(playroomId: playroomId!);
-    return await repository.exists().then((exists) {
+    return await Playroom.exists(playroomId!).then((exists) {
       if (!exists) {
         validationMessage = "部屋が見つかりませんでした";
       } else {
@@ -101,8 +100,9 @@ class NameInputPage extends StatelessWidget {
     if (playroomId == null) {
       await _createPlayroom(player).then((id) => playroomId = id);
     } else {
-      var repository = PlayroomRepository(playroomId: playroomId!);
-      await repository.addPlayer(player);
+      Playroom.find(playroomId!).then((playroom) {
+        playroom?.addPlayer(player);
+      });
     }
 
     if (playroomId != null) {
@@ -123,7 +123,7 @@ class NameInputPage extends StatelessWidget {
   Future<String?> _createPlayroom(Player player) async {
     // TODO: 「お待ちください」的な表示
     // TODO: ボタンを複数回クリックできないようにする
-    return PlayroomRepository.createPlayroom(player).then((id) {
+    return Playroom.create(player).then((id) {
       if (id != null) {
         return id;
       } else {

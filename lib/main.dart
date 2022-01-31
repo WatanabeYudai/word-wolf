@@ -11,7 +11,7 @@ void main() async {
 
   await Firebase.initializeApp();
 
-  var auth = FirebaseAuth.instance;
+  final auth = FirebaseAuth.instance;
   var currentUser = auth.currentUser;
   if (currentUser == null) {
     var userCredential = await auth.signInAnonymously();

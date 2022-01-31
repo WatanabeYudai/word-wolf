@@ -26,8 +26,8 @@ class PlayroomRepository {
     databaseURL: Constants.databaseUrl,
   );
 
-  static Future<String?> createPlayroom(Player admin) {
-    final String playroomId = _generateRandomString(6);
+  static Future<String?> create(Player admin) {
+    final playroomId = _generateRandomString(6);
     DocumentReference docRef =
         FirebaseFirestore.instance.collection('playrooms').doc(playroomId);
     return docRef.get().then((value) {
@@ -35,16 +35,7 @@ class PlayroomRepository {
       if (value.exists) {
         return null;
       }
-      Playroom room = Playroom(
-        id: playroomId,
-        adminPlayerId: admin.id,
-        players: [admin],
-        wolfCount: 1,
-        timeLimitMinutes: 5,
-        topic: Topic.sports,
-        gameStatus: GameStatus.standby,
-        createdAt: Timestamp.now(),
-      );
+      final room = _createDefaultPlayroom(playroomId, admin);
       // TODO: 保存できなかったときの処理を検討
       docRef.set(room.toMap());
       return playroomId;
@@ -60,13 +51,15 @@ class PlayroomRepository {
   }
 
   Future<void> removePlayer(String playerId) {
+    // TODO: 退出ユーザーが管理者だったとき
+    // TODO: 退出ユーザーが最後の一人だったとき
     return documentRef.update({
       '${C.playroom.players}.$playerId': FieldValue.delete(),
     });
   }
 
   void setIsActive(String playerId, bool isActive) async {
-    var target = await findPlayer(playerId);
+    final target = await findPlayer(playerId);
     if (target == null) {
       return;
     }
@@ -78,40 +71,34 @@ class PlayroomRepository {
 
   Future<Player?> findPlayer(String playerId) {
     return documentRef.get().then((snapshot) {
-      var players = _snapshotToPlayerList(snapshot);
+      final players = _snapshotToPlayerList(snapshot);
       return players.firstWhereOrNull((player) => player.id == playerId);
     });
   }
 
-  Stream<Playroom> getPlayroom() {
-    return documentRef
-        .snapshots()
-        .transform(StreamTransformer<DocumentSnapshot<Map<String, dynamic>>, Playroom>
+  static Stream<Playroom> stream(String playroomId) {
+    final documentRef = FirebaseFirestore.instance
+        .collection('playrooms')
+        .doc(playroomId);
+    return documentRef.snapshots().transform(
+        StreamTransformer<DocumentSnapshot<Map<String, dynamic>>, Playroom>
             .fromHandlers(handleData: (snapshot, sink) {
-      if (snapshot.exists) {
-        try {
-          var players = _snapshotToPlayerList(snapshot);
-          var topic = TopicHelper.fromName(snapshot.get(C.playroom.topic));
-          var room = Playroom(
-            id: snapshot.get(C.playroom.id),
-            adminPlayerId: snapshot.get(C.playroom.adminPlayerId),
-            players: players,
-            wolfCount: snapshot.get(C.playroom.wolfCount),
-            timeLimitMinutes: snapshot.get(C.playroom.timeLimitMinutes),
-            topic: topic,
-            gameStatus: GameStatusHelper.fromName(snapshot.get(C.playroom.gameStatus)),
-            createdAt: snapshot.get(C.playroom.createdAt),
-          );
-          sink.add(room);
-        } catch(e) {
-          // TODO エラー処理
-          print(e);
-        }
+      final room = _snapshotToPlayroom(snapshot);
+      if (room != null) {
+        sink.add(room);
       }
     }));
   }
 
-  Future<bool> exists() async {
+  static Future<Playroom?> find(String playroomId) {
+    final documentRef = _getDocumentRef(playroomId);
+    return documentRef.get().then((snapshot) {
+      return _snapshotToPlayroom(snapshot);
+    });
+  }
+
+  static Future<bool> exists(String playroomId) async {
+    final documentRef = _getDocumentRef(playroomId);
     return documentRef.get().then((snapshot) {
       return snapshot.exists;
     });
@@ -123,21 +110,70 @@ class PlayroomRepository {
     });
   }
 
-  List<Player> _snapshotToPlayerList(DocumentSnapshot snapshot) {
-    try {
-      var playerMap = snapshot.get(C.playroom.players) as Map<String, dynamic>;
-      var playerList = playerMap.values.toList();
-      return playerList
-          .map((e) => Player(
+  static DocumentReference _getDocumentRef(String playroomId) {
+    return FirebaseFirestore.instance
+        .collection('playrooms')
+        .doc(playroomId);
+  }
+
+  static Playroom? _snapshotToPlayroom(DocumentSnapshot snapshot) {
+    if (snapshot.exists) {
+      try {
+        var players = _snapshotToPlayerList(snapshot);
+        var topic = TopicHelper.fromName(snapshot.get(C.playroom.topic));
+        return Playroom(
+          id: snapshot.get(C.playroom.id),
+          adminPlayerId: snapshot.get(C.playroom.adminPlayerId),
+          players: players,
+          wolfCount: snapshot.get(C.playroom.wolfCount),
+          timeLimitMinutes: snapshot.get(C.playroom.timeLimitMinutes),
+          topic: topic,
+          gameState: GameStatusHelper.fromName(
+            snapshot.get(C.playroom.gameStatus),
+          ),
+          createdAt: snapshot.get(C.playroom.createdAt),
+        );
+      } catch(e) {
+        // TODO エラー処理
+        print(e);
+      }
+    }
+  }
+
+  static List<Player> _snapshotToPlayerList(DocumentSnapshot snapshot) {
+    if (snapshot.exists) {
+      try {
+        var playerMap = snapshot.get(
+            C.playroom.players,
+        ) as Map<String, dynamic>;
+        var playerList = playerMap.values.toList();
+        return playerList
+            .map(
+              (e) => Player(
                 id: e[C.player.id],
                 name: e[C.player.name],
                 isWolf: e[C.player.isWolf],
                 isActive: e[C.player.isActive],
-              ))
-          .toList();
-    } catch (e) {
-      return [];
+              ),
+            ).toList();
+      } catch (e) {
+        print(e);
+      }
     }
+    return [];
+  }
+
+  static Playroom _createDefaultPlayroom(String playroomId, Player admin) {
+    return Playroom(
+      id: playroomId,
+      adminPlayerId: admin.id,
+      players: [admin],
+      wolfCount: 1,
+      timeLimitMinutes: 5,
+      topic: Topic.sports,
+      gameState: GameState.standby,
+      createdAt: Timestamp.now(),
+    );
   }
 
   static String _generateRandomString(int length) {

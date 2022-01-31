@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
+import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/page/name_input_page.dart';
-import 'package:word_wolf/repository/playroom_repository.dart';
 
 import '../custom_widget/full_width_button.dart';
 import '../custom_widget/simple_input_field.dart';
@@ -91,8 +91,7 @@ class LobbyPage extends StatelessWidget {
       validationMessage = '部屋コードを入力してください';
       return;
     }
-    var repository = PlayroomRepository(playroomId: code!);
-    return await repository.exists().then((exists) {
+    return await Playroom.exists(code!).then((exists) {
       if (exists) {
         validationMessage = null;
       } else {
