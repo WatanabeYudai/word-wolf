@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
+import 'package:word_wolf/model/game_status.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
@@ -23,61 +24,72 @@ class PlayroomPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () {
-        _showLeavingRoomDialog(context, () {
-          _onPressedOk(context);
-        });
-        return Future.value(true);
+    return StreamBuilder<Playroom>(
+      stream: Playroom.getStream(playroomId),
+      builder: (context, snapshot) {
+        return WillPopScope(
+          onWillPop: () {
+            _showLeavingRoomDialog(context, () {
+              _onPressedOk(context, snapshot.data);
+            });
+            return Future.value(true);
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              title: const Text('プレイルーム'),
+              leading: TextButton(
+                child: const Icon(
+                  Icons.home,
+                  color: Colors.white,
+                ),
+                onPressed: () => _showLeavingRoomDialog(context, () {
+                  _onPressedOk(context, snapshot.data);
+                }),
+              ),
+            ),
+            body: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: NoGlowScrollView(
+                child: Builder(builder: (context) {
+                  if (!snapshot.hasData) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  if (snapshot.data != null) {
+                    final room = snapshot.data!;
+                    switch (room.gameState) {
+                      case GameState.standby:
+                        return ListView(
+                          shrinkWrap: true,
+                          children: [
+                            _createRoomIdView(room),
+                            _createGameRulesView(room),
+                            _createMemberListView(room),
+                            FullWidthButton(
+                              text: 'ゲーム開始！',
+                              onTap: () => {},
+                            ),
+                          ],
+                        );
+                      case GameState.playing:
+                        return ListView();
+                      case GameState.voting:
+                        return ListView();
+                      case GameState.ended:
+                        return ListView();
+                    }
+                  } else {
+                    return const Center(
+                      child: Text('エラーが発生しました'),
+                    );
+                  }
+                }),
+              ),
+            ),
+          ),
+        );
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('プレイルーム'),
-          leading: TextButton(
-            child: const Icon(
-              Icons.home,
-              color: Colors.white,
-            ),
-            onPressed: () => _showLeavingRoomDialog(context, () {
-              _onPressedOk(context);
-            }),
-          ),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: NoGlowScrollView(
-            child: StreamBuilder<Playroom>(
-              stream: repository.getPlayroom(),
-              builder: (context, playroom) {
-                if (!playroom.hasData) {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-                if (playroom.data != null) {
-                  var room = playroom.data!;
-                  return ListView(
-                    shrinkWrap: true,
-                    children: [
-                      _createRoomIdView(room),
-                      _createGameRulesView(room),
-                      _createMemberListView(room),
-                      FullWidthButton(
-                        text: 'ゲーム開始！',
-                        onTap: () => {},
-                      ),
-                    ],
-                  );
-                } else {
-                  return const Center(
-                    child: Text('エラーが発生しました'),
-                  );
-                }
-              },
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -161,8 +173,14 @@ class PlayroomPage extends StatelessWidget {
     );
   }
 
-  void _onPressedOk(BuildContext context) {
-    repository.removePlayer(currentUser?.uid ?? '');
+  void _onPressedOk(BuildContext context, Playroom? playroom) {
+    if (playroom != null) {
+      if (playroom.gameState == GameState.standby) {
+        playroom.removePlayer(currentUser?.uid ?? '');
+      } else {
+        // TODO: データは残して非アクティブにする
+      }
+    }
     Navigator.of(context).pop();
   }
 }
