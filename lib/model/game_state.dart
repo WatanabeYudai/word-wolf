@@ -5,7 +5,7 @@ enum GameState {
   ended,
 }
 
-class GameStatusHelper {
+class GameStateHelper {
   static GameState fromName(String name) {
     if (name == 'standby') {
       return GameState.standby;

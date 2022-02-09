@@ -1,8 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:collection/collection.dart';
 import 'package:word_wolf/common/c.dart';
-import 'package:word_wolf/model/game_status.dart';
-import 'package:word_wolf/model/topic.dart';
+import 'package:word_wolf/model/game_state.dart';
 import 'package:word_wolf/model/player.dart';
+import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
 
 class Playroom {
@@ -24,6 +25,7 @@ class Playroom {
   int timeLimitMinutes;
   Topic topic;
   GameState gameState;
+  bool isClosed = false;
   final Timestamp createdAt;
 
   late final _repository = PlayroomRepository(playroomId: id);
@@ -36,7 +38,8 @@ class Playroom {
       C.playroom.wolfCount: wolfCount,
       C.playroom.timeLimitMinutes: timeLimitMinutes,
       C.playroom.topic: topic.name(),
-      C.playroom.gameStatus: gameState.name,
+      C.playroom.gameState: gameState.name,
+      C.playroom.isClosed: isClosed,
       C.playroom.createdAt: createdAt,
     };
   }
@@ -49,8 +52,12 @@ class Playroom {
 
   static Stream<Playroom> getStream(String id) => PlayroomRepository.stream(id);
 
-  Future<void> addPlayer(Player player) => _repository.addPlayer(player);
+  Future<String?> enter(Player player) => _repository.enter(player);
 
-  Future<void> removePlayer(String playerId) => _repository.removePlayer(playerId);
+  Future<void> leave(String playerId) => _repository.leave(playerId);
 
+  Player? findPlayer(String playerId) =>
+      players.firstWhereOrNull((player) => player.id == playerId);
+
+  bool isNowPlaying() => gameState != GameState.standby;
 }

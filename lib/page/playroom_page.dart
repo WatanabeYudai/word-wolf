@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
-import 'package:word_wolf/model/game_status.dart';
+import 'package:word_wolf/model/game_state.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
@@ -124,7 +124,7 @@ class PlayroomPage extends StatelessWidget {
   }
 
   Widget _createMemberListView(Playroom room) {
-    var rows = room.players.map((player) {
+    final rows = room.players.map((player) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -175,11 +175,7 @@ class PlayroomPage extends StatelessWidget {
 
   void _onPressedOk(BuildContext context, Playroom? playroom) {
     if (playroom != null) {
-      if (playroom.gameState == GameState.standby) {
-        playroom.removePlayer(currentUser?.uid ?? '');
-      } else {
-        // TODO: データは残して非アクティブにする
-      }
+      playroom.leave(playerId);
     }
     Navigator.of(context).pop();
   }

@@ -90,7 +90,7 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    var player = Player(
+    final player = Player(
       id: currentUser.uid,
       name: name,
       isWolf: false,
@@ -101,7 +101,7 @@ class NameInputPage extends StatelessWidget {
       await _createPlayroom(player).then((id) => playroomId = id);
     } else {
       Playroom.find(playroomId!).then((playroom) {
-        playroom?.addPlayer(player);
+        playroom?.enter(player);
       });
     }
 
