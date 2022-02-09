@@ -1,6 +1,7 @@
 class C {
-  static var playroom = const PlayroomColumn();
-  static var player = const PlayerColumn();
+  static const playroom = PlayroomColumn();
+  static const player = PlayerColumn();
+  static const user = UserColumn();
 }
 
 class PlayroomColumn {
@@ -11,7 +12,8 @@ class PlayroomColumn {
   String get wolfCount => 'wolfCount';
   String get timeLimitMinutes => 'timeLimitMinutes';
   String get topic => 'topic';
-  String get gameStatus => 'gameStatus';
+  String get gameState => 'gameState';
+  String get isClosed => 'isClosed';
   String get createdAt => 'createdAt';
 }
 
@@ -21,4 +23,12 @@ class PlayerColumn {
   String get name => 'name';
   String get isWolf => 'isWolf';
   String get isActive => 'isActive';
+}
+
+class UserColumn {
+  const UserColumn();
+  String get id => 'id';
+  String get state => 'state';
+  String get currentPlayroom => 'currentPlayroom';
+  String get lastChanged => 'lastChanged';
 }
