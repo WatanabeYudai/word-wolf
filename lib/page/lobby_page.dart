@@ -1,7 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
+import 'package:word_wolf/model/player.dart';
+import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/page/name_input_page.dart';
-import 'package:word_wolf/repository/playroom_repository.dart';
+import 'package:word_wolf/page/playroom_page.dart';
 
 import '../custom_widget/full_width_button.dart';
 import '../custom_widget/simple_input_field.dart';
@@ -9,9 +12,15 @@ import '../custom_widget/simple_input_field.dart';
 class LobbyPage extends StatelessWidget {
   LobbyPage({Key? key}) : super(key: key);
 
-  final repository = PlayroomRepository();
+  final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
   String? validationMessage;
+
+  bool canReenter = false;
+
+  Playroom? room;
+
+  Player? player;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +40,11 @@ class LobbyPage extends StatelessWidget {
             child: ListView(
               shrinkWrap: true,
               children: <Widget>[
+                /// TODO: デバッグ用なので最終的に削除
+                Text(
+                  uid ?? '',
+                  textAlign: TextAlign.center,
+                ),
                 const SizedBox(height: 32),
                 Container(
                   height: 200,
@@ -75,31 +89,68 @@ class LobbyPage extends StatelessWidget {
 
   void _onTapCreatePlayroom(BuildContext context) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => NameInputPage(isAdminUser: true),
+      builder: (_) => NameInputPage(isAdmin: true),
     ));
   }
 
-  void _onTapEnterPlayroom(BuildContext context, String code) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => NameInputPage(
-        isAdminUser: false,
-        roomId: code,
-      ),
-    ));
+  void _onTapEnterPlayroom(BuildContext context, String code) async {
+    if (canReenter) {
+      // 再入室可能な場合
+      if (room != null && player != null) {
+        final error = await room?.enter(player!);
+        if (error == null) {
+          // FIXME: プレイヤーがアクティブ化しない
+          room?.enter(player!);
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => PlayroomPage(
+              playroomId: room!.id,
+              playerId: player!.id,
+              isAdmin: false,
+            ),
+          ));
+        } else {
+          // TODO: エラー処理
+        }
+      } else {
+        // TODO: エラー処理
+      }
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => NameInputPage(
+          isAdmin: false,
+          playroomId: code,
+        ),
+      ));
+    }
   }
 
   Future<void> _prepareValidation(String? code) async {
+    room = null;
+    player = null;
+    canReenter = false;
+    validationMessage = null;
+
     if (code?.isEmpty ?? true) {
       validationMessage = '部屋コードを入力してください';
       return;
     }
-    return await repository.exists(code!).then((exists) {
-      if (exists) {
-        validationMessage = null;
-      } else {
-        validationMessage = '部屋コードが間違ってます';
+
+    room = await Playroom.find(code!);
+    if (room != null) {
+      if (room?.isClosed == true) {
+        validationMessage = 'この部屋には入室できません';
+        return;
       }
-    });
+      player = room?.findPlayer(uid ?? '');
+      canReenter = player != null ? true : false;
+      if (room?.isNowPlaying() == true && !canReenter) {
+        validationMessage = '現在ゲームプレイ中のため終了までお待ちください';
+        return;
+      }
+      validationMessage = null;
+    } else {
+      validationMessage = '部屋コードが間違っています';
+    }
   }
 
   String? _validate(String? code) {

@@ -1,28 +1,20 @@
-import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class User {
   User({
     required this.id,
-    required this.name,
-    required this.isWolf,
+    required this.state,
+    required this.currentPlayroom,
+    required this.lastChanged,
   });
 
-  User.create({
-    required this.name,
-    required this.isWolf,
-  }) {
-    id = const Uuid().v1();
-  }
+  final String id;
+  UserState state;
+  String currentPlayroom;
+  Timestamp lastChanged;
+}
 
-  late final String id;
-  final String name;
-  final bool isWolf;
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'isWolf': isWolf,
-    };
-  }
+enum UserState {
+  online,
+  offline,
 }

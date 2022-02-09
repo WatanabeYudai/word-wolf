@@ -1,22 +1,22 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/custom_widget/simple_input_field.dart';
-import 'package:word_wolf/model/user.dart';
+import 'package:word_wolf/model/player.dart';
+import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/page/playroom_page.dart';
-import 'package:word_wolf/repository/playroom_repository.dart';
 
 class NameInputPage extends StatelessWidget {
   NameInputPage({
     Key? key,
-    required this.isAdminUser,
-    this.roomId,
+    required this.isAdmin,
+    this.playroomId,
   }) : super(key: key);
 
-  final bool isAdminUser;
-  String? roomId;
+  final bool isAdmin;
+  String? playroomId;
 
   final GlobalKey<FormState> _formKey = GlobalKey();
-  final PlayroomRepository repository = PlayroomRepository();
   String? validationMessage;
 
   @override
@@ -61,12 +61,12 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    if (isAdminUser) {
+    if (isAdmin) {
       validationMessage = null;
       return;
     }
 
-    return await repository.exists(roomId!).then((exists) {
+    return await Playroom.exists(playroomId!).then((exists) {
       if (!exists) {
         validationMessage = "部屋が見つかりませんでした";
       } else {
@@ -84,29 +84,46 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    User user = User.create(name: name, isWolf: false);
-    if (roomId == null) {
-      await _createPlayroom(user).then((id) => roomId = id);
-    } else {
-      await repository.addUser(roomId!, user);
+    var currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      // TODO: エラー表示
+      return;
     }
 
-    if (roomId != null) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(
-        builder: (_) => PlayroomPage(
-          roomId: roomId!,
-          isAdmin: isAdminUser,
+    final player = Player(
+      id: currentUser.uid,
+      name: name,
+      isWolf: false,
+      isActive: true,
+    );
+
+    if (playroomId == null) {
+      await _createPlayroom(player).then((id) => playroomId = id);
+    } else {
+      Playroom.find(playroomId!).then((playroom) {
+        playroom?.enter(player);
+      });
+    }
+
+    if (playroomId != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => PlayroomPage(
+            playroomId: playroomId!,
+            playerId: player.id,
+            isAdmin: isAdmin,
+          ),
         ),
-      ));
+      );
     } else {
       // TODO: エラー処理
     }
   }
 
-  Future<String?> _createPlayroom(User user) async {
+  Future<String?> _createPlayroom(Player player) async {
     // TODO: 「お待ちください」的な表示
     // TODO: ボタンを複数回クリックできないようにする
-    return repository.createPlayroom(user).then((id) {
+    return Playroom.create(player).then((id) {
       if (id != null) {
         return id;
       } else {

@@ -3,8 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/custom_widget/number_input_view.dart';
 import 'package:word_wolf/model/topic.dart';
-import 'package:word_wolf/model/user.dart';
-import 'package:word_wolf/repository/playroom_repository.dart';
 import 'package:word_wolf/state_manager/game_setting_state_manager.dart';
 import '../custom_widget/full_width_button.dart';
 
@@ -76,10 +74,6 @@ class GameSettingPage extends HookConsumerWidget {
     if (_formKey.currentState?.validate() != true) {
       return;
     }
-    String name = controller.text;
-    User adminUser = User.create(name: name, isWolf: false);
-    PlayroomRepository repository = PlayroomRepository();
-    repository.createPlayroom(adminUser);
   }
 }
 
