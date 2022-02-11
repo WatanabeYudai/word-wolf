@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+
+      function isLoggedIn() {
+        return request.auth != null;
+      }
+
+      function isMyDoc(userId) {
+        return isLoggedIn() && userId == request.auth.uid;
+      }
+
+      // 自分のドキュメントであれば取得可能。
+      allow get: if isMyDoc();
+
+      // 一度に複数のドキュメントを読み込まない。
+      allow list: if false;
+
+      // ドキュメント作成は Functions により行うので、クライアントからの作成は不可とする。
+      allow crate: if false;
+
+      // 自分のドキュメントであれば更新可能。
+      allow update: if isMyDoc();
+
+      // ドキュメント削除は Functions により行うので、クライアントからの削除は不可とする。
+      allow delete: if false;
+    }
+  }
+}

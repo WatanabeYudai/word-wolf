@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:word_wolf/common/presence_manager.dart';
@@ -10,6 +12,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
+  
+  // const flavor = String.fromEnvironment('FLAVOR');
+  // if (flavor == 'dev') {
+  //   FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  //   FirebaseDatabase.instance.useDatabaseEmulator('localhost', 9000);
+  //   FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+  // }
 
   final auth = FirebaseAuth.instance;
   var currentUser = auth.currentUser;
