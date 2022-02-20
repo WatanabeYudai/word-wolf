@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
 import 'package:word_wolf/model/game_state.dart';
+import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
@@ -25,7 +26,7 @@ class PlayroomPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Playroom>(
-      stream: Playroom.getStream(playroomId),
+      stream: Playroom.getPlayroomStream(playroomId),
       builder: (context, snapshot) {
         return WillPopScope(
           onWillPop: () {
@@ -124,27 +125,31 @@ class PlayroomPage extends StatelessWidget {
   }
 
   Widget _createMemberListView(Playroom room) {
-    final rows = room.players.map((player) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.circle,
-            color: player.isActive ? Colors.greenAccent : Colors.grey,
+    return StreamBuilder<List<Player>>(
+      stream: Playroom.getPlayersStream(playroomId),
+      builder: (context, snapshot) {
+        final rows = snapshot.data?.map((player) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.circle,
+                color: player.isActive ? Colors.greenAccent : Colors.grey,
+              ),
+              Text(player.name),
+            ],
+          );
+        }).toList();
+
+        return Card(
+          child: Column(
+            children: [
+              const Text('〜メンバー〜'),
+              Column(children: rows ?? []),
+            ],
           ),
-          Text(player.name),
-        ],
-      );
-    }).toList();
-    return Card(
-      child: Column(
-        children: [
-          const Text('〜メンバー〜'),
-          Column(
-            children: rows,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

@@ -1,10 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
-import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/page/name_input_page.dart';
-import 'package:word_wolf/page/playroom_page.dart';
+import 'package:word_wolf/repository/user_repository.dart';
 
 import '../custom_widget/full_width_button.dart';
 import '../custom_widget/simple_input_field.dart';
@@ -14,13 +13,7 @@ class LobbyPage extends StatelessWidget {
 
   final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-  String? validationMessage;
-
-  bool canReenter = false;
-
   Playroom? room;
-
-  Player? player;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +67,7 @@ class LobbyPage extends StatelessWidget {
                   margin: const EdgeInsets.symmetric(horizontal: 32),
                   hintText: '部屋コード',
                   buttonText: '部屋に入る',
-                  prepareValidation: _prepareValidation,
+                  // FIXME: このバリデーションだとボタン連打が可能 = 通信コストがかかるのでダイアログ表示にする
                   validator: _validate,
                   onSubmit: (code) => _onTapEnterPlayroom(context, code),
                 ),
@@ -94,67 +87,30 @@ class LobbyPage extends StatelessWidget {
   }
 
   void _onTapEnterPlayroom(BuildContext context, String code) async {
-    if (canReenter) {
-      // 再入室可能な場合
-      if (room != null && player != null) {
-        final error = await room?.enter(player!);
-        if (error == null) {
-          // FIXME: プレイヤーがアクティブ化しない
-          room?.enter(player!);
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => PlayroomPage(
-              playroomId: room!.id,
-              playerId: player!.id,
-              isAdmin: false,
-            ),
-          ));
-        } else {
-          // TODO: エラー処理
-        }
-      } else {
-        // TODO: エラー処理
-      }
-    } else {
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => NameInputPage(
-          isAdmin: false,
-          playroomId: code,
-        ),
-      ));
-    }
+    await UserRepository(userId: uid!).setCurrentPlayroom(code);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => NameInputPage(
+        isAdmin: false,
+        playroomId: code,
+      ),
+    ));
   }
 
-  Future<void> _prepareValidation(String? code) async {
+  Future<String?> _validate(String? code) async {
     room = null;
-    player = null;
-    canReenter = false;
-    validationMessage = null;
-
     if (code?.isEmpty ?? true) {
-      validationMessage = '部屋コードを入力してください';
-      return;
+      return '部屋コードを入力してください。';
     }
 
     room = await Playroom.find(code!);
-    if (room != null) {
-      if (room?.isClosed == true) {
-        validationMessage = 'この部屋には入室できません';
-        return;
-      }
-      player = room?.findPlayer(uid ?? '');
-      canReenter = player != null ? true : false;
-      if (room?.isNowPlaying() == true && !canReenter) {
-        validationMessage = '現在ゲームプレイ中のため終了までお待ちください';
-        return;
-      }
-      validationMessage = null;
-    } else {
-      validationMessage = '部屋コードが間違っています';
+    if (room == null) {
+      return '部屋コードが間違っています。';
     }
-  }
+    if (room?.isClosed == true) {
+      return 'この部屋には入室できません。';
+    }
 
-  String? _validate(String? code) {
-    return validationMessage;
+    return null;
   }
 }
 

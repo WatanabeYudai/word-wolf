@@ -10,7 +10,7 @@ import 'package:word_wolf/model/game_state.dart';
 import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
-import 'package:word_wolf/repository/user_repository.dart';
+import 'package:word_wolf/model/user.dart';
 import 'package:word_wolf/util/constants.dart';
 
 class PlayroomRepository {
@@ -20,7 +20,9 @@ class PlayroomRepository {
 
   final String playroomId;
 
-  late var documentRef = FirebaseFirestore.instance.collection('playrooms').doc(playroomId);
+  late var playroomRef = FirebaseFirestore.instance.collection('playrooms').doc(playroomId);
+
+  late var playersRef = playroomRef.collection('players');
 
   final db = FirebaseDatabase.instanceFor(
     app: Firebase.app(),
@@ -28,58 +30,59 @@ class PlayroomRepository {
   );
 
   /// プレイルームを作成する。
-  static Future<String?> create(Player admin) {
+  static Future<String?> create(Player admin) async {
     final playroomId = _generateRandomString(6);
-    final playroomRef = FirebaseFirestore.instance
-        .collection('playrooms')
-        .doc(playroomId);
-    return playroomRef.get().then((value) {
-      // 同じ ID の部屋が存在したらエラーを返す。
-      if (value.exists) {
-        return null;
-      }
-      final room = _createDefaultPlayroom(playroomId, admin);
-      // TODO: 保存できなかったときの処理を検討
-      playroomRef.set(room.toMap());
-      FirebaseFirestore.instance
-          .collection('users')
-          .doc(admin.id)
-          .update({ C.user.currentPlayroom: room.id });
-      return playroomId;
-    });
+    final room = _createDefaultPlayroom(playroomId, admin);
+    final playroomRef = _getPlayroomRef(playroomId);
+    final playerRef = _getPlayerRef(playroomId, admin.id);
+    final userRef = _getUserRef(admin.id);
+
+    try {
+      await playroomRef.set(room.toMap());
+      await userRef.update({ C.user.currentPlayroom: room.id });
+      await playerRef.set(admin.toMap());
+    } catch(e) {
+      // TODO: プレイルーム作成に失敗したときの処理
+      print(e);
+      return null;
+    }
+
+    return playroomId;
   }
 
   /// プレイルームへの入室処理を行う。
   ///
-  /// 入室できたときは null、入室できなかったときはその理由を Future<String?> で返却する。
+  /// 入室できたときは null、入室できなかったときはその理由を String で返却する。
   /// 入室の条件は以下のとおり。
   ///
   /// * ゲームがスタンバイ状態であれば入室できる
   /// * ゲームがプレイ中であれば基本的に入室できない
   /// * ゲームがプレイ中でも非アクティブな参加プレイヤーであれば入室できる
-  Future<String?> enter(Player player) {
-    return documentRef.get().then((snapshot) {
-      if (!snapshot.exists) {
-        return '部屋が見つかりませんでした';
-      }
-      final room = _snapshotToPlayroom(snapshot);
-      if (room?.gameState == GameState.standby) {
-        // ゲームがスタンバイ状態であれば入室
-        _addPlayer(player);
-        return null;
-      }
-      final exists = room?.players.firstWhereOrNull((e) {
-        return e.id == player.id;
-      }) != null;
-      if (exists) {
-        // 非アクティブな参加プレイヤーはゲームに復帰できる
-        _activatePlayer(player.id);
-        return null;
-      } else {
-        // ゲームプレイ中は入室できない
-        return 'ゲーム中のため少々お待ちください';
-      }
-    });
+  Future<String?> enter(Player player) async {
+    final roomSnapshot = await playroomRef.get();
+    if (!roomSnapshot.exists) {
+      return 'エラーが発生しました。';
+    }
+    final room = _snapshotToPlayroom(roomSnapshot);
+    if (room?.gameState == GameState.standby) {
+      // ゲームがスタンバイ状態であれば入室
+      _addPlayer(player);
+      return null;
+    }
+
+    final playersSnapshot = await playersRef.get();
+    final players = _snapshotToPlayerList(playersSnapshot);
+    final exists = players.firstWhereOrNull((e) {
+      return e.id == player.id;
+    }) != null;
+    if (exists) {
+      // 非アクティブな参加プレイヤーはゲームに復帰できる
+      _addPlayer(player);
+      return null;
+    } else {
+      // ゲームプレイ中は入室できない
+      return 'ゲーム中のため少々お待ちください。';
+    }
   }
 
   /// プレイルームからの退室処理を行う。
@@ -91,91 +94,72 @@ class PlayroomRepository {
   /// 【補足情報】
   /// * 退出後、プレイヤーが０人になる場合、部屋を閉じる処理のみを行う
   /// * 退出プレイヤーが管理者だった場合、別のプレイヤーを管理者にする
-  Future<void> leave(String playerId) {
-    return documentRef.get().then((snapshot) {
-      UserRepository(userId: playroomId).clearCurrentPlayroom();
-      if (!snapshot.exists) return;
+  Future<void> leave(String playerId) async {
+    User.find(playerId).then((user) => user.clearCurrentPlayroom());
+    final roomSnapshot = await playroomRef.get();
+    if (!roomSnapshot.exists) return;
+    final room = _snapshotToPlayroom(roomSnapshot);
+    if (room == null) return;
 
-      final room = _snapshotToPlayroom(snapshot);
-      if (room == null) return;
-
-      final activePlayers = room.players.where((player) => player.isActive);
-      // 自分以外にアクティブなプレイヤーがいない場合は部屋を閉じる
-      if (activePlayers.length <= 1) {
-        _closePlayroom();
-        return;
-      }
-
-      // プレイヤーが管理者だった場合は他のプレイヤーを管理者にする
-      final isAdmin = room.adminPlayerId == playerId;
-      final newAdmin = isAdmin
-          ? activePlayers.firstWhere((player) => player.id != playerId)
-          : null;
-      if (room.gameState == GameState.standby) {
-        _removePlayer(playerId, newAdmin?.id);
-      } else {
-        _inactivatePlayer(playerId, newAdmin?.id);
-      }
-    });
-  }
-
-  Future<void> _addPlayer(Player player) {
-    UserRepository(userId: player.id).updateCurrentPlayroom(playroomId);
-    return documentRef.set({
-      C.playroom.players: {
-        player.id: player.toMap()
-      },
-    }, SetOptions(merge: true));
-  }
-
-  Future<void> _removePlayer(String playerId, String? nextAdmin) {
-    if (nextAdmin != null) {
-      return documentRef.update({
-        C.playroom.adminPlayerId: nextAdmin,
-        '${C.playroom.players}.$playerId': FieldValue.delete(),
-      });
+    final playersSnapshot = await playersRef.get();
+    final players = _snapshotToPlayerList(playersSnapshot);
+    final activePlayers = players.where((player) => player.isActive);
+    // 自分以外にアクティブなプレイヤーがいない場合は部屋を閉じる
+    if (activePlayers.length <= 1) {
+      _closePlayroom();
+      return;
+    }
+    // プレイヤーが管理者だった場合は他のプレイヤーを管理者にする
+    final isAdmin = room.adminPlayerId == playerId;
+    final newAdmin = isAdmin
+        ? activePlayers.firstWhere((player) => player.id != playerId)
+        : null;
+    if (room.gameState == GameState.standby) {
+      _removePlayer(playerId, newAdmin?.id);
     } else {
-      return documentRef.update({
-        '${C.playroom.players}.$playerId': FieldValue.delete(),
-      });
+      _inactivatePlayer(playerId, newAdmin?.id);
     }
   }
 
+  Future<void> _addPlayer(Player player) {
+    return playersRef.doc(player.id).set(player.toMap());
+  }
+
+  Future<void> _removePlayer(String playerId, String? nextAdmin) async {
+    if (nextAdmin != null) {
+      await playroomRef.update({C.playroom.adminPlayerId: nextAdmin});
+    }
+    return playersRef.doc(playerId).delete();
+  }
+
   Future<void> _activatePlayer(String playerId) async {
-    UserRepository(userId: playerId).updateCurrentPlayroom(playroomId);
-    return documentRef.update({
-      '${C.playroom.players}.$playerId.${C.player.isActive}': true,
+    return playersRef.doc(playerId).update({
+      C.player.isActive: true,
     });
   }
 
   Future<void> _inactivatePlayer(String playerId, String? nextAdmin) async {
-    UserRepository(userId: playerId).clearCurrentPlayroom();
     if (nextAdmin != null) {
-      return documentRef.update({
-        C.playroom.adminPlayerId: nextAdmin,
-        '${C.playroom.players}.$playerId.${C.player.isActive}': false,
-      });
-    } else {
-      return documentRef.update({
-        '${C.playroom.players}.$playerId.${C.player.isActive}': false,
-      });
+      playroomRef.update({C.playroom.adminPlayerId: nextAdmin});
     }
+    return playersRef.doc(playerId).update({
+      C.player.isActive: false,
+    });
   }
 
   Future<void> _closePlayroom() {
-    return documentRef.update({
+    return playroomRef.update({
       C.playroom.isClosed: true,
     });
   }
 
-  Future<Player?> findPlayer(String playerId) {
-    return documentRef.get().then((snapshot) {
-      final players = _snapshotToPlayerList(snapshot);
-      return players.firstWhereOrNull((player) => player.id == playerId);
-    });
+  Future<Player?> findPlayer(String playerId) async {
+    final playersSnapshot = await playersRef.get();
+    final players = _snapshotToPlayerList(playersSnapshot);
+    return players.firstWhereOrNull((player) => player.id == playerId);
   }
 
-  static Stream<Playroom> stream(String playroomId) {
+  static Stream<Playroom> playroomStream(String playroomId) {
     final documentRef = _getPlayroomRef(playroomId);
     return documentRef.snapshots().transform(
         StreamTransformer<DocumentSnapshot<Map<String, dynamic>>, Playroom>
@@ -187,11 +171,23 @@ class PlayroomRepository {
     }));
   }
 
-  static Future<Playroom?> find(String playroomId) {
-    final documentRef = _getPlayroomRef(playroomId);
-    return documentRef.get().then((snapshot) {
+  static Stream<List<Player>> playersStream(String playroomId) {
+    final playersRef = _getPlayersRef(playroomId);
+    return playersRef.snapshots().transform(
+        StreamTransformer<QuerySnapshot<Map<String, dynamic>>, List<Player>>
+            .fromHandlers(handleData: (snapshot, sink) {
+      final players = _snapshotToPlayerList(snapshot);
+      sink.add(players);
+    }));
+  }
+
+  static Future<Playroom?> findPlayroom(String playroomId) async {
+    final snapshot = await _getPlayroomRef(playroomId).get();
+    if (snapshot.exists) {
       return _snapshotToPlayroom(snapshot);
-    });
+    } else {
+      return null;
+    }
   }
 
   static Future<bool> exists(String playroomId) async {
@@ -207,27 +203,40 @@ class PlayroomRepository {
     });
   }
 
-  Future<List<Player>> _fetchCurrentPlayers() {
-    return documentRef.get().then((snapshot) {
-      return _snapshotToPlayerList(snapshot);
-    });
-  }
-
   static DocumentReference _getPlayroomRef(String playroomId) {
     return FirebaseFirestore.instance
         .collection('playrooms')
         .doc(playroomId);
   }
 
+  static CollectionReference _getPlayersRef(String playroomId) {
+    return FirebaseFirestore.instance
+        .collection('playrooms')
+        .doc(playroomId)
+        .collection('players');
+  }
+
+  static DocumentReference _getPlayerRef(String playroomId, String playerId) {
+    return FirebaseFirestore.instance
+        .collection('playrooms')
+        .doc(playroomId)
+        .collection('players')
+        .doc(playerId);
+  }
+
+  static DocumentReference _getUserRef(String userId) {
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId);
+  }
+
   static Playroom? _snapshotToPlayroom(DocumentSnapshot snapshot) {
     if (snapshot.exists) {
       try {
-        var players = _snapshotToPlayerList(snapshot);
-        var topic = TopicHelper.fromName(snapshot.get(C.playroom.topic));
+        final topic = TopicHelper.fromName(snapshot.get(C.playroom.topic));
         return Playroom(
           id: snapshot.get(C.playroom.id),
           adminPlayerId: snapshot.get(C.playroom.adminPlayerId),
-          players: players,
           wolfCount: snapshot.get(C.playroom.wolfCount),
           timeLimitMinutes: snapshot.get(C.playroom.timeLimitMinutes),
           topic: topic,
@@ -243,34 +252,33 @@ class PlayroomRepository {
     }
   }
 
-  static List<Player> _snapshotToPlayerList(DocumentSnapshot snapshot) {
-    if (snapshot.exists) {
-      try {
-        var playerMap = snapshot.get(
-            C.playroom.players,
-        ) as Map<String, dynamic>;
-        var playerList = playerMap.values.toList();
-        return playerList
-            .map(
-              (e) => Player(
-                id: e[C.player.id],
-                name: e[C.player.name],
-                isWolf: e[C.player.isWolf],
-                isActive: e[C.player.isActive],
-              ),
-            ).toList();
-      } catch (e) {
-        print(e);
-      }
-    }
-    return [];
+  static List<Player> _snapshotToPlayerList(QuerySnapshot snapshot) {
+    return snapshot.docs.map((doc) {
+      final data = doc.data()  as Map<String, dynamic>;
+      return Player(
+        id: data[C.player.id],
+        name: data[C.player.name],
+        isWolf: data[C.player.isWolf],
+        isActive: data[C.player.isActive],
+      );
+    }).toList();
+  }
+
+  static Player _snapshotToPlayer(DocumentSnapshot snapshot) {
+    final data = snapshot.data() as Map<String, dynamic>;
+    return Player(
+        id: data['id'],
+        name: data['name'],
+        isWolf: data['isWolf'],
+        isActive: data['isActive'],
+    );
   }
 
   static Playroom _createDefaultPlayroom(String playroomId, Player admin) {
     return Playroom(
       id: playroomId,
       adminPlayerId: admin.id,
-      players: [admin],
+      // players: [admin],
       wolfCount: 1,
       timeLimitMinutes: 5,
       topic: Topic.sports,

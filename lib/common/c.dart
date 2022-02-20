@@ -8,7 +8,6 @@ class PlayroomColumn {
   const PlayroomColumn();
   String get id => 'id';
   String get adminPlayerId => 'adminPlayerId';
-  String get players => 'players';
   String get wolfCount => 'wolfCount';
   String get timeLimitMinutes => 'timeLimitMinutes';
   String get topic => 'topic';

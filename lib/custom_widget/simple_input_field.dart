@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:word_wolf/custom_widget/simple_alert_dialog.dart';
 import 'package:word_wolf/custom_widget/full_width_button.dart';
 
 class SimpleInputField extends StatefulWidget {
@@ -9,15 +10,13 @@ class SimpleInputField extends StatefulWidget {
     required this.buttonText,
     required this.onSubmit,
     this.validator,
-    this.prepareValidation,
   }) : super(key: key);
 
   final EdgeInsetsGeometry? margin;
   final String hintText;
   final String buttonText;
   final void Function(String) onSubmit;
-  final String? Function(String?)? validator;
-  final Future<void> Function(String?)? prepareValidation;
+  final Future<String?> Function(String?)? validator;
 
   final TextEditingController controller = TextEditingController();
 
@@ -39,7 +38,6 @@ class _SimpleInputFieldState extends State<SimpleInputField> {
             margin: widget.margin,
             child: TextFormField(
               controller: widget.controller,
-              validator: widget.validator,
               textAlign: TextAlign.center,
               decoration: InputDecoration(
                 hintText: widget.hintText,
@@ -61,19 +59,16 @@ class _SimpleInputFieldState extends State<SimpleInputField> {
     );
   }
 
-  void _onTap() {
+  Future<void> _onTap() async {
     String text = widget.controller.text;
-
-    if (widget.prepareValidation != null) {
-      widget.prepareValidation!(text).then((_) {
-        if (_formKey.currentState?.validate() == true) {
-          widget.onSubmit(text);
-        }
-      });
+    final errorMessage = await widget.validator?.call(text);
+    if (errorMessage == null) {
+      widget.onSubmit(text);
     } else {
-      if (_formKey.currentState?.validate() == true) {
-        widget.onSubmit(text);
-      }
+      showDialog(
+          context: context,
+          builder: (_) => SimpleAlertDialog(message: errorMessage),
+      );
     }
   }
 }
