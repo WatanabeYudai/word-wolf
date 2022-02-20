@@ -1,30 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function currentData() {
+      return resource.data;
+    }
+
+    function sentData() {
+      return request.resource.data;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    // ********************
+    //        User
+    // ********************
     match /users/{userId} {
+      // 自分のドキュメントであれば許可
+      allow get: if isMyUserDoc(userId);
 
-      function isLoggedIn() {
-        return request.auth != null;
-      }
+      // 自分のドキュメントであれば許可
+      allow update: if isMyUserDoc(userId);
 
-      function isMyDoc(userId) {
+      function isMyUserDoc(userId) {
         return isLoggedIn() && userId == request.auth.uid;
       }
+    }
 
-      // 自分のドキュメントであれば取得可能。
-      allow get: if isMyDoc();
+    // ********************
+    //       Playroom
+    // ********************
+    match /playrooms/{playroomId} {
+      // ログインしていれば許可
+      allow get: if isLoggedIn();
 
-      // 一度に複数のドキュメントを読み込まない。
-      allow list: if false;
+      // ログインしていれば許可
+      allow create: if isLoggedIn();
 
-      // ドキュメント作成は Functions により行うので、クライアントからの作成は不可とする。
-      allow crate: if false;
+      // 部屋が開いている && 管理者である && ID に変更がなければ許可
+      allow update: if isOpen()
+        && isAdmin()
+        && isSameRoomId();
 
-      // 自分のドキュメントであれば更新可能。
-      allow update: if isMyDoc();
+      function isAdmin() {
+        return isLoggedIn() && currentData().adminPlayerId == uid();
+      }
 
-      // ドキュメント削除は Functions により行うので、クライアントからの削除は不可とする。
-      allow delete: if false;
+      function isSameRoomId() {
+        return currentData().id == sentData().id;
+      }
+
+      function isOpen() {
+        return !currentData().isClosed;
+      }
+
+      // ********************
+      //       Player
+      // ********************
+      match /players/{playerId} {
+        // ログインしていれば許可
+        allow get: if isLoggedIn() && belongsTo(playroomId);
+
+        // ログインしていれば許可
+        allow list: if isLoggedIn() && belongsTo(playroomId);
+
+        // ログインしている && 所属している部屋であれば許可
+        allow create: if isLoggedIn() && belongsTo(playroomId);
+
+        // ログインしている && 自分のドキュメントであれば許可
+        allow update: if isMyPlayerDoc(playerId);
+
+        allow delete: if isMyPlayerDoc(playerId);
+
+        function isMyPlayerDoc(playerId) {
+          return isLoggedIn() && playerId == uid();
+        }
+
+        function belongsTo(playroomId) {
+          return get(/databases/$(database)/documents/users/$(uid())).data.currentPlayroom == playroomId;
+        }
+      }
     }
   }
 }
