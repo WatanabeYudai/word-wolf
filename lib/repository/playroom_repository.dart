@@ -254,7 +254,7 @@ class PlayroomRepository {
 
   static List<Player> _snapshotToPlayerList(QuerySnapshot snapshot) {
     return snapshot.docs.map((doc) {
-      final data = doc.data()  as Map<String, dynamic>;
+      final data = doc.data() as Map<String, dynamic>;
       return Player(
         id: data[C.player.id],
         name: data[C.player.name],
