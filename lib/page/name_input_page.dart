@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:word_wolf/custom_widget/no_glow_scroll_view.dart';
+import 'package:word_wolf/custom_widget/simple_alert_dialog.dart';
 import 'package:word_wolf/custom_widget/simple_input_field.dart';
 import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
@@ -17,7 +18,6 @@ class NameInputPage extends StatelessWidget {
   String? playroomId;
 
   final GlobalKey<FormState> _formKey = GlobalKey();
-  String? validationMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +42,6 @@ class NameInputPage extends StatelessWidget {
                   SimpleInputField(
                     hintText: 'あなたの名前を入力してください',
                     buttonText: '完了',
-                    prepareValidation: _prepareValidation,
                     validator: _validate,
                     onSubmit: (name) => {_onSubmit(context, name)},
                   ),
@@ -55,28 +54,22 @@ class NameInputPage extends StatelessWidget {
     );
   }
 
-  Future<void> _prepareValidation(String? name) async {
+  Future<String?> _validate(String? name) async {
     if (name?.isEmpty ?? true) {
-      validationMessage = '名前を入力してください';
-      return;
+      return '名前を入力してください。';
     }
 
     if (isAdmin) {
-      validationMessage = null;
-      return;
+      return null;
     }
 
     return await Playroom.exists(playroomId!).then((exists) {
       if (!exists) {
-        validationMessage = "部屋が見つかりませんでした";
+        return "部屋が見つかりませんでした。";
       } else {
-        validationMessage = null;
+        return null;
       }
     });
-  }
-
-  String? _validate(String? name) {
-    return validationMessage;
   }
 
   void _onSubmit(BuildContext context, String name) async {
@@ -84,7 +77,7 @@ class NameInputPage extends StatelessWidget {
       return;
     }
 
-    var currentUser = FirebaseAuth.instance.currentUser;
+    final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       // TODO: エラー表示
       return;
@@ -98,11 +91,19 @@ class NameInputPage extends StatelessWidget {
     );
 
     if (playroomId == null) {
-      await _createPlayroom(player).then((id) => playroomId = id);
+      // 部屋を作成する場合
+      playroomId = await _createPlayroom(player);
     } else {
-      Playroom.find(playroomId!).then((playroom) {
-        playroom?.enter(player);
-      });
+      // 部屋に入る場合
+      final playroom = await Playroom.find(playroomId!);
+      final errorMessage = await playroom?.enter(player);
+      if (errorMessage != null) {
+        showDialog(
+          context: context,
+          builder: (_) => SimpleAlertDialog(message: errorMessage),
+        );
+        return;
+      }
     }
 
     if (playroomId != null) {
@@ -120,7 +121,7 @@ class NameInputPage extends StatelessWidget {
     }
   }
 
-  Future<String?> _createPlayroom(Player player) async {
+  Future<String?> _createPlayroom(Player player) {
     // TODO: 「お待ちください」的な表示
     // TODO: ボタンを複数回クリックできないようにする
     return Playroom.create(player).then((id) {
