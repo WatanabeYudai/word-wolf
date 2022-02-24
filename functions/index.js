@@ -12,7 +12,6 @@ const FieldValue = admin.firestore.FieldValue;
 exports.onUserCreated = functions.database.ref('/users/{uid}').onCreate(
     async (snapshot, context) => {
         const user = snapshot.val();
-        functions.logger.log(user);
         const data = {
             id: context.params.uid,
             lastChanged: new Date(user.lastChanged),
@@ -49,74 +48,111 @@ exports.onUserStatusChanged = functions.database.ref('/users/{uid}').onUpdate(
 
 /**
  * ユーザーがオフラインになったとき、
- * 必要に応じユーザー情報、プレイルーム情報を更新する。
+ * 必要に応じてユーザー情報、プレイルーム情報を更新する。
  */
-exports.onUserStateChangedToOffline = functions.firestore.document('users/{uid}').onUpdate(
-    async (change, context) => {
+exports.onUserStateChanged = functions.firestore.document('users/{uid}').onUpdate(
+    (change, context) => {
         const newStatus = change.after.data();
         const roomId = newStatus.currentPlayroom;
+        const playerId = context.params.uid;
         if (newStatus.state === 'offline' && roomId) {
-            const roomRef = firestore.collection('playrooms').doc(roomId);
-            const room = (await roomRef.get()).data();
-            const playerId = context.params.uid;
-            switch (room.gameState) {
-                case 'standby':
-                    // プレイヤーリストから削除
-                    removePlayer(room, playerId)
-                    clearCurrentPlayroom(playerId)
-                    return null;
-                case 'playing':
-                case 'voting':
-                case 'ended':
-                    // プレイヤーを inactive 化
-                    inactivatePlayer(room, playerId);
-                    clearCurrentPlayroom(playerId)
-                    return null;
-                default:
-                    functions.logger.log('No such game state.');
-                    return null;
-            }
+            leavePlayroom(roomId, playerId);
         }
         return null;
     }
 );
 
-function removePlayer(playroom, playerId) {
-    functions.logger.log('called removePlayer()');
-    prepare(playroom, playerId);
-    const deletePlayer = {};
-    deletePlayer['players.' + playerId] = FieldValue.delete();
-    const roomRef = firestore.collection('playrooms').doc(playroom.id);
-    roomRef.update(deletePlayer);
+async function enterPlayroom(playroomId, playerId) {
+    const roomRef = firestore.collection('playrooms').doc(playroomId);
+    const snapshot = await roomRef.get();
+    if (!snapshot.exists) return;
+    const room = snapshot.data();
+    switch (room.gameState) {
+        case 'standby':
+            // プレイヤーリストから削除
+            removePlayer(room, playerId)
+            clearCurrentPlayroom(playerId)
+            return;
+        case 'playing':
+        case 'voting':
+        case 'ended':
+            // プレイヤーを inactive 化
+            inactivatePlayer(room, playerId);
+            clearCurrentPlayroom(playerId)
+            return;
+        default:
+            functions.logger.log('No such game state.');
+            return;
+    }
 }
 
-function inactivatePlayer(playroom, playerId) {
+async function leavePlayroom(playroomId, playerId) {
+    const roomRef = firestore.collection('playrooms').doc(playroomId)
+    const snapshot = await roomRef.get();
+    if (!snapshot.exists) {
+        functions.logger.log('room does not exist.');
+        return;
+    }
+    const room = snapshot.data();
+    switch (room.gameState) {
+        case 'standby':
+            // プレイヤーリストから削除
+            await removePlayer(room.id, playerId)
+            await onLeftPlayroom(room, playerId)
+            clearCurrentPlayroom(playerId)
+            return;
+        case 'playing':
+        case 'voting':
+        case 'ended':
+            // プレイヤーを inactive 化
+            await inactivatePlayer(room.id, playerId);
+            await onLeftPlayroom(room, playerId)
+            clearCurrentPlayroom(playerId)
+            return;
+        default:
+            functions.logger.log('No such game state.');
+            return;
+    }
+}
+
+async function removePlayer(playroomId, playerId) {
+    functions.logger.log('called removePlayer()');
+    const playerRef = firestore
+        .collection('playrooms').doc(playroomId)
+        .collection('players').doc(playerId);
+    await playerRef.delete();
+}
+
+async function inactivatePlayer(playroomId, playerId) {
     functions.logger.log('called inactivatePlayer()');
-    prepare(playroom, playerId);
-    const updatePlayer = {};
-    updatePlayer['players.' + playerId + '.isActive'] = false;
-    const roomRef = firestore.collection('playrooms').doc(playroom.id);
-    roomRef.update(updatePlayer);
+    const playerRef = firestore
+        .collection('playrooms').doc(playroomId)
+        .collection('players').doc(playerId);
+    await playerRef.update({ isActive: false });
 }
 
 // TODO: メソッド名検討
-function prepare(playroom, playerId) {
-    functions.logger.log('called prepare()');
-    const roomRef = firestore.collection('playrooms').doc(playroom.id);
-    const activePlayerIds = Object.keys(playroom.players).filter(id => {
-        return playroom.players[id].isActive
-    });
+async function onLeftPlayroom(playroom, playerId) {
+    functions.logger.log('called onLeftPlayroom()');
+    const playroomRef = firestore.collection('playrooms').doc(playroom.id)
+    const playersRef = playroomRef.collection('players');
+    const playersSnapshot = await playersRef.get();
+    const activePlayerIds = playersSnapshot.docs
+        .filter(doc => doc.data().isActive)
+        .map(doc => doc.data().id);
+
     // 自分以外にアクティブなプレイヤーがいない場合は部屋を閉じる
-    if (activePlayerIds.length <= 1) {
-      roomRef.set({ isClosed: true }, { merge: true });
-      return;
+    if (activePlayerIds.length === 0) {
+        playroomRef.set({ isClosed: true }, { merge: true });
+        return;
     }
+    // TODO: この時点で管理者が変わっていないことを保証できるか？
     const isAdmin = playroom.adminPlayerId === playerId;
     // プレイヤーが管理者だった場合は他のプレイヤーを管理者にする
     if (isAdmin) {
         // TODO: この時点で activePlayerIds[0] のプレイヤーがアクティブだと保証できるか？
-        newAdminId = activePlayerIds[0]
-        roomRef.set({ adminPlayerId: newAdminId }, { merge: true });
+        const newAdminId = activePlayerIds[0];
+        playroomRef.update({ adminPlayerId: newAdminId });
     }
 }
 
