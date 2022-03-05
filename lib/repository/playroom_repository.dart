@@ -6,6 +6,7 @@ import 'package:collection/collection.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:word_wolf/common/c.dart';
+import 'package:word_wolf/model/game_settings.dart';
 import 'package:word_wolf/model/game_state.dart';
 import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
@@ -57,7 +58,7 @@ class PlayroomRepository {
   ///
   /// * ゲームがスタンバイ状態であれば入室できる
   /// * ゲームがプレイ中であれば基本的に入室できない
-  /// * ゲームがプレイ中でも非アクティブな参加プレイヤーであれば入室できる
+  /// * ゲームがプレイ中でも途中退出したプレイヤーであれば入室できる
   Future<String?> enter(Player player) async {
     final roomSnapshot = await playroomRef.get();
     if (!roomSnapshot.exists) {
@@ -76,7 +77,7 @@ class PlayroomRepository {
       return e.id == player.id;
     }) != null;
     if (exists) {
-      // 非アクティブな参加プレイヤーはゲームに復帰できる
+      // 途中退出したプレイヤーはゲームに復帰できる
       _addPlayer(player);
       return null;
     } else {
@@ -159,6 +160,13 @@ class PlayroomRepository {
     return players.firstWhereOrNull((player) => player.id == playerId);
   }
 
+  Future<void> updateSetting(GameSettings settings) async {
+    playroomRef.set(
+      {C.playroom.gameSettings: settings.toMap()},
+      SetOptions(merge: true),
+    );
+  }
+
   static Stream<Playroom> playroomStream(String playroomId) {
     final documentRef = _getPlayroomRef(playroomId);
     return documentRef.snapshots().transform(
@@ -233,13 +241,17 @@ class PlayroomRepository {
   static Playroom? _snapshotToPlayroom(DocumentSnapshot snapshot) {
     if (snapshot.exists) {
       try {
-        final topic = TopicHelper.fromName(snapshot.get(C.playroom.topic));
+        final Map<String, dynamic> gameSettingsMap = snapshot.get(C.playroom.gameSettings);
+        final topic = TopicHelper.fromName(gameSettingsMap[C.playroom.topic]);
+        final gameSetting = GameSettings(
+            wolfCount: gameSettingsMap[C.playroom.wolfCount],
+            timeLimitMinutes: gameSettingsMap[C.playroom.timeLimitMinutes],
+            topic: topic
+        );
         return Playroom(
           id: snapshot.get(C.playroom.id),
           adminPlayerId: snapshot.get(C.playroom.adminPlayerId),
-          wolfCount: snapshot.get(C.playroom.wolfCount),
-          timeLimitMinutes: snapshot.get(C.playroom.timeLimitMinutes),
-          topic: topic,
+          gameSettings: gameSetting,
           gameState: GameStateHelper.fromName(
             snapshot.get(C.playroom.gameState),
           ),
@@ -278,10 +290,11 @@ class PlayroomRepository {
     return Playroom(
       id: playroomId,
       adminPlayerId: admin.id,
-      // players: [admin],
-      wolfCount: 1,
-      timeLimitMinutes: 5,
-      topic: Topic.sports,
+      gameSettings: const GameSettings(
+        wolfCount: 1,
+        timeLimitMinutes: 10,
+        topic: Topic.all,
+      ),
       gameState: GameState.standby,
       createdAt: Timestamp.now(),
     );
