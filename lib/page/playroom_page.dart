@@ -6,6 +6,7 @@ import 'package:word_wolf/model/game_state.dart';
 import 'package:word_wolf/model/player.dart';
 import 'package:word_wolf/model/playroom.dart';
 import 'package:word_wolf/model/topic.dart';
+import 'package:word_wolf/page/game_settings_page.dart';
 import 'package:word_wolf/repository/playroom_repository.dart';
 
 class PlayroomPage extends StatelessWidget {
@@ -57,6 +58,7 @@ class PlayroomPage extends StatelessWidget {
                       child: CircularProgressIndicator(),
                     );
                   }
+                  // TODO: isClosed = true のときエラーダイアログを表示してロビーに戻す
                   if (snapshot.data != null) {
                     final room = snapshot.data!;
                     switch (room.gameState) {
@@ -65,7 +67,7 @@ class PlayroomPage extends StatelessWidget {
                           shrinkWrap: true,
                           children: [
                             _createRoomIdView(room),
-                            _createGameRulesView(room),
+                            _createGameRulesView(context, room),
                             _createMemberListView(room),
                             FullWidthButton(
                               text: 'ゲーム開始！',
@@ -108,16 +110,29 @@ class PlayroomPage extends StatelessWidget {
     );
   }
 
-  Widget _createGameRulesView(Playroom room) {
+  Widget _createGameRulesView(BuildContext context, Playroom room) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Column(
           children: [
             const Text('〜ルール〜'),
-            Text('人狼の数： ${room.wolfCount}人'),
-            Text('制限時間： ${room.timeLimitMinutes}分'),
-            Text('テーマ： ${room.topic.displayName()}'),
+            Text('人狼の数： ${room.gameSettings.wolfCount}人'),
+            Text('制限時間： ${room.gameSettings.timeLimitMinutes}分'),
+            Text('テーマ： ${room.gameSettings.topic.displayName()}'),
+            ElevatedButton(
+              onPressed: () => {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => GameSettingsPage(
+                      initialSetting: room.gameSettings,
+                      onSubmit: (settings) => room.updateSetting(settings),
+                    ),
+                  ),
+                ),
+              },
+              child: const Text('編集'),
+            ),
           ],
         ),
       ),
